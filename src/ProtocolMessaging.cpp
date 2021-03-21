@@ -1,11 +1,15 @@
-#include "SocketsSetter.h"
+#include "ProtocolMessaging.h"
 
 
+
+
+// UDP ONLY:
 status_t settingUDPSocketListener(int *sockfd){
   char yes = 1;
   struct addrinfo hints;
   struct addrinfo *serverinfo, *p; // *p: will run over every getaddrinfo() result and find one suitable
   LogRecords logHandler;
+
 
   if(sockfd == NULL){
     return ERROR_UDPLISTENER_SOCKET_PARAMETER_NULL;
@@ -47,10 +51,26 @@ status_t settingUDPSocketListener(int *sockfd){
     return ERROR_UDPLISTENER_SOCKET_BINDING_FAILURE;
   }
 
-  // As the funciton set up a listener, we put the socket to listening state:
-  if (listen(*sockfd, BACKLOG) == -1) {
-    return ERROR_UDPLISTENER_SOCKET_LISTEN_FAILURE;
-  }
-
+  // Listener Socket for UDP is set. Waiting for recvfrom...
   return STATUS_OK;
 }
+
+
+// END UDP ONLY
+
+// TCP ONLY:
+
+status_t settingTCPSocketListener(int *sockfd){
+  return STATUS_OK;
+}
+status_t receiveTCPMessage(int from_sockfd){
+  return STATUS_OK;
+}
+status_t sendTCPMessage(int to_sockfd){
+  return STATUS_OK;
+}
+status_t acceptingTCPNewClient(int sockClient){
+  return STATUS_OK;
+}
+
+//END TCP ONLY:

@@ -18,6 +18,10 @@ class LogRecords {
         LogRecords();
         void LogMessage(status_t);
         void LogMessage(string);
+        void LogMessage(string, status_t);
 };
+
+
+
 
 #endif

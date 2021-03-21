@@ -16,3 +16,8 @@ void LogRecords :: LogMessage(status_t status){
 void LogRecords :: LogMessage(string message){
     cout << message << "\n";
 }
+
+void LogRecords :: LogMessage(string message, status_t status){
+    this->LogMessage(status);
+    this->LogMessage(message);
+}

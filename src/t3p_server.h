@@ -1,6 +1,7 @@
-#ifndef SOCKETSSETTER_H
-#define SOCKETSSETTER_H
+#ifndef T3P_SERVER_H
+#define T3P_SERVER_H
 
+// Std Libs:
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,14 +16,19 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+// Created libs:
 #include "ErrorHandler.h"
 #include "LogRecords.h"
+#include "ProtocolMessaging.h"
+#include "ServerDiscovery.h"
+#include "clientProcessing.h"
 
-#define UDP_PORT_NUMBER "2001"
-#define TCP_PORT_NUMBER "2000"
 
-#define BACKLOG 10  //  Max of connections in queue
 
-status_t settingUDPSocketListener(int *sockfd);
+using namespace std;
+
+
+status_t t3p_server(void);
+
 
 #endif

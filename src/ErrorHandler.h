@@ -2,7 +2,7 @@
 #define ERRORHANDLER_H
 
 #include <iostream>
-#include <string>
+#include <string.h>
 
 //#include "LogRecords.h"
 
@@ -19,6 +19,7 @@ typedef enum{
     ERROR_UDPLISTENER_SOCKET_BINDING, //Not Disruptive
     ERROR_UDPLISTENER_SOCKET_BINDING_FAILURE,
     ERROR_UDPLISTENER_SOCKET_LISTEN_FAILURE,
+    ERROR_RIPPING_ALL_CHILD_PROCESSES,
 
 
     /*******************************/
@@ -50,5 +51,6 @@ class ErrorHandler {
         ErrorHandler();
         void errorCode(status_t);
 };
+
 
 #endif
