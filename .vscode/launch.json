@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Debuggin tests",
+            "name": "Debug server",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/debug/debug_server.out",

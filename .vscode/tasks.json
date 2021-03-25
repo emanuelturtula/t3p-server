@@ -6,7 +6,8 @@
             "command": "/usr/bin/g++",
             "args": [
                 "-g",
-                "${workspaceFolder}/src/*.cpp",
+                "-pthread",
+                "${workspaceFolder}/cpp/*.cpp",
                 "-o",
                 "${workspaceFolder}/debug/debug_server.out"
             ],

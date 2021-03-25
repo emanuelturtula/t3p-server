@@ -1,18 +1,19 @@
-#ifndef ERRORHANDLER_H
-#define ERRORHANDLER_H
+#pragma once
 
-#include <iostream>
-#include <string.h>
-
-//#include "LogRecords.h"
+#include <string>
+#include <list>
 
 using namespace std;
 
-//Not Disruptive: means that there was an error in a function, but can continue
-typedef enum{
+enum status_t {
     // Internal server Errors:
     STATUS_OK = 0,
-    ERROR_UDPLISTENER_SOCKET_PARAMETER_NULL,
+    ERROR_NULL_POINTER,
+    ERROR_SOCKET_CREATION,
+    ERROR_SOCKET_CONFIGURATION,
+    ERROR_SOCKET_LISTENING,
+    ERROR_GETTING_ADDRINFO,
+    ERROR_SOCKET_BINDING,
     ERROR_UDPLISTENER_GETADDRINFO,
     ERROR_UDPLISTENER_SOCKET_CREATION, //Not Disruptive
     ERROR_UDPLISTENER_SOCKET_SETSOCKOPT,
@@ -23,7 +24,7 @@ typedef enum{
 
 
     /*******************************/
-    // RFC Errors:
+    // RFC Responses:
     //1xx: Informative responses
     INFO_NO_PLAYERS_AVAILABLE = 100,
     //2xx: Correct petitions
@@ -40,17 +41,38 @@ typedef enum{
     ERROR_COMMAND_OUT_OF_CONTEXT = 408,
     ERROR_CONNECTION_LOST = 409,
     //5xx: Errors from server
-    SRVERROR_SERVER_ERROR = 500
-
-
-} status_t;
-
+    ERROR_SERVER_ERROR = 500
+};
 
 class ErrorHandler {
     public:
         ErrorHandler();
-        void errorCode(status_t);
+        void printErrorCode(status_t);
 };
 
+class Printer {
+    public:
+        Printer();
+        void writeStdout(string message);
+        void writeStderr(string message);
+};
 
-#endif
+class Logger {
+    public:
+        Logger();
+        ErrorHandler errorHandler;
+        void printMessage(status_t);
+        void printMessage(string);
+        void printMessage(string, status_t);
+        void debugMessage(string);
+    private:
+        Printer printer;
+};
+
+class T3PResponse {
+    public:
+        T3PResponse();
+        string statusCode;
+        string statusMessage;
+        list<string> dataList;
+};
