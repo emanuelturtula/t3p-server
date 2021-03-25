@@ -3,7 +3,11 @@
 
 using namespace std;
 
-void processClient(int connectedSockfd)
+void processClient(int connectedSockfd, int slotNumber)
 {
+    //The first thing to do, is check that the login is correct. Else,
+    //we finish the thread.
+
+    //Previous ending the thread, we must free the slot.
 }
 

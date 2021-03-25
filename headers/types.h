@@ -2,6 +2,7 @@
 
 #include <string>
 #include <list>
+#include <thread>
 
 using namespace std;
 
@@ -75,4 +76,11 @@ class T3PResponse {
         string statusCode;
         string statusMessage;
         list<string> dataList;
+};
+
+class Slot {
+    public:
+        Slot();
+        bool available;
+        thread associatedThread;
 };

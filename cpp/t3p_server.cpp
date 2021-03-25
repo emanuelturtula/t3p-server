@@ -7,11 +7,16 @@
 #include <string.h>
 #include <unistd.h>
 #include <thread>
+#include <vector>
 #include "../headers/t3p_server.h"
 #include "../headers/types.h" 
 #include "../headers/udp_thread.h"
 #include "../headers/tcp_thread.h"
 #include "../headers/config.h"
+
+using namespace std;
+
+vector<Slot> slots(MAX_PLAYERS_ONLINE);
 
 status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd);
 
@@ -61,16 +66,31 @@ status_t t3p_server(const char *ip)
         {
             // error handling
         }
-        // create a new thread. 
-        // How are we going to manage the vector of threads?
-    
+        else 
+        {
+            logger.debugMessage("Accepted connection. Checking if there is a free slot...");
+            bool isServerFull = true;
+            for (int slotNumber = 0; slotNumber < slots.size(); slotNumber++)
+            {
+                if (slots[slotNumber].available)
+                {
+                    logger.debugMessage("Free slot found.");
+                    slots[slotNumber].available = false;
+                    slots[slotNumber].associatedThread = thread(processClient, connectedSocket, slotNumber);
+                    isServerFull = false;
+                    break;
+                }
+            }
+            if (isServerFull)
+            {
+                //Check if client's message is correct (a login). If not,
+                //return corresponding error message, else, return server full message.
+            }
+        }
     }
     
 
-
-    
-
-    return status;
+    return STATUS_OK;
 }
 
 status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd)
@@ -106,9 +126,6 @@ status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd)
         logger.errorHandler.printErrorCode(ERROR_SOCKET_BINDING); 
         return ERROR_SOCKET_BINDING;
     }
-
-    // if (setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(int)) < 0) 
-    //     return ERROR_SOCKET_CONFIGURATION;
   
     return STATUS_OK;
 }

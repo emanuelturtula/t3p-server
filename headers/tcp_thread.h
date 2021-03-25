@@ -2,4 +2,4 @@
 
 #include "types.h"
 
-void processClient(int connectedSockfd);
+void processClient(int connectedSockfd, int slotNumber);

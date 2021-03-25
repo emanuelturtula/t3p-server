@@ -4,6 +4,7 @@
         "mutex": "cpp",
         "cstdlib": "cpp",
         "*.tcc": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "thread": "cpp"
     }
 }

@@ -77,3 +77,11 @@ void Printer :: writeStderr(string message)
     lock_guard<mutex> lock(m_stderr);
     cout << message << endl;
 }
+
+/**
+ * Methods for Slot
+ * */
+Slot :: Slot()
+{
+    this->available = true; 
+}

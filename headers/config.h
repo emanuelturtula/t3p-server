@@ -5,6 +5,7 @@
 #define TCP_PORT_NUMBER 2000
 #define TCP_BUFFER_SIZE 1024
 #define TCP_MAX_PENDING_CONNECTIONS 5
+#define MAX_PLAYERS_ONLINE 50
 
 // Colours
 #define RESET   "\033[0m"
