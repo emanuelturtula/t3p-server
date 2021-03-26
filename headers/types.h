@@ -3,6 +3,9 @@
 #include <string>
 #include <list>
 #include <thread>
+#include <ctime>
+#include <vector>
+#include "config.h"
 
 using namespace std;
 
@@ -13,6 +16,7 @@ enum status_t {
     ERROR_SOCKET_CREATION,
     ERROR_SOCKET_CONFIGURATION,
     ERROR_SOCKET_LISTENING,
+    ERROR_SOCKET_READING,
     ERROR_GETTING_ADDRINFO,
     ERROR_SOCKET_BINDING,
     ERROR_UDPLISTENER_GETADDRINFO,
@@ -43,6 +47,11 @@ enum status_t {
     ERROR_CONNECTION_LOST = 409,
     //5xx: Errors from server
     ERROR_SERVER_ERROR = 500
+};
+
+enum context_t {
+    SOCKET_CONNECTED,
+    LOBBY,  
 };
 
 class ErrorHandler {
@@ -78,9 +87,41 @@ class T3PResponse {
         list<string> dataList;
 };
 
+class T3PCommand {
+    public:
+        T3PCommand();
+        string command;
+        list<string> dataList;
+};
+
 class Slot {
     public:
         Slot();
         bool available;
         thread associatedThread;
 };
+
+class MainDatabaseEntry {
+    public:
+        MainDatabaseEntry();
+        // Use slotNumber = -1 to indicate the entry space is not being used.
+        int slotNumber = -1;  
+        string playerName;
+        bool invitationPending = false;
+        string invitingPlayerName;
+        context_t context;
+        time_t lastHeartbeat;
+};
+
+class MainDatabase {
+    vector<MainDatabaseEntry> entries;
+    public:
+        MainDatabase();
+        int getAvailableEntry();
+        list<string> getPlayersOnline();
+        list<string> getAvailablePlayers();
+        list<string> getOccupiedPlayers();
+        void setEntry(int entryNumber, MainDatabaseEntry entry); 
+
+};
+

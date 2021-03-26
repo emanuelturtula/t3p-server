@@ -5,6 +5,7 @@
         "cstdlib": "cpp",
         "*.tcc": "cpp",
         "fstream": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "system_error": "cpp"
     }
 }
