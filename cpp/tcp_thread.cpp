@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <algorithm>
+#include <regex>
 #include "../headers/tcp_thread.h"
 #include "../headers/types.h"
 
@@ -10,6 +11,7 @@ using namespace std;
 extern vector<Slot> slots;
 extern MainDatabase mainDatabase;
 
+// List of possible TCP commands
 list<string> TCPCommands = {
     "LOGIN",
     "LOGOUT",
@@ -19,13 +21,15 @@ list<string> TCPCommands = {
     "GIVEUP"
 };
 
-
+//Prototypes
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand);
 status_t parseMessage(string message, T3PCommand *t3pCommand);
 status_t respond(int sockfd, status_t response);
 status_t checkCommand(T3PCommand t3pCommand, context_t context);
 void clearSlot(int slotNumber);
+status_t checkPlayerName(string name);
 
+//Main function
 void processClient(int connectedSockfd, int slotNumber)
 {
     status_t status;
@@ -76,8 +80,11 @@ void processClient(int connectedSockfd, int slotNumber)
 
     if (!name_available)
     {
+        status = ERROR_NAME_TAKEN;
         respond(connectedSockfd, status);
     }    
+
+
 
     // Send response to client
     
@@ -86,7 +93,12 @@ void processClient(int connectedSockfd, int slotNumber)
     //The first thing to do, is to check that the login is correct or the player is not online.
     //If  
 
+
+    // Close the socket
+    close(connectedSockfd);
     //Previous ending the thread, we must free the slot.
+    clearSlot(slotNumber);
+    return;
 }
 
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand)
@@ -145,6 +157,7 @@ status_t respond(int sockfd, status_t response)
  */
 status_t checkCommand(T3PCommand t3pCommand, context_t context)
 {
+    status_t status;
     //First we need to check if the incomming command is present
     //in a list of possible commands.
     if (find(TCPCommands.begin(), TCPCommands.end(), t3pCommand.command) == TCPCommands.end())
@@ -159,10 +172,22 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
             if (t3pCommand.command != "LOGIN")
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
             // TODO: Check player's name
+            if ((status = checkPlayerName(t3pCommand.dataList.front())) != STATUS_OK)
+                return status;
             break;
         case LOBBY:
-
-
+            if ((t3pCommand.command != "INVITE") || 
+                (t3pCommand.command != "RANDOMINVITE") || 
+                (t3pCommand.command != "LOGOUT"))
+                return ERROR_COMMAND_OUT_OF_CONTEXT;
+            if (t3pCommand.command == "INVITE")
+            {
+                if ((status = checkPlayerName(t3pCommand.dataList.front())) != STATUS_OK)
+                    return status;
+            }
+            break;
+        default:
+            return ERROR_SERVER_ERROR;
     }
     return STATUS_OK;
 }
@@ -171,4 +196,14 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
 void clearSlot(int slotNumber)
 {
     slots[slotNumber] = Slot();
+}
+
+status_t checkPlayerName(string name)
+{
+    regex nameChecker("^[a-zA-Z]+$");
+    if ((name.length() < 3) || (name.length() > 20))
+        return ERROR_INCORRECT_NAME;
+    if (!regex_match(name, nameChecker))
+        return ERROR_INCORRECT_NAME;
+    return STATUS_OK;
 }
