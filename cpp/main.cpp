@@ -10,7 +10,7 @@ int main(void){
     #if defined(DEBUG_TEST)
         // Just for testing we are hardcoding the IP, but it should be 
         // read from command line as an argument or from config file.
-        if((status = t3p_server("172.23.134.149")) != STATUS_OK)
+        if((status = t3p_server("127.0.0.1")) != STATUS_OK)
             return EXIT_FAILURE;
         return EXIT_SUCCESS;
     #else

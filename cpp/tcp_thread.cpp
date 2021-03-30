@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <algorithm>
 #include <regex>
+#include <ctime>
+#include <map>
 #include "../headers/tcp_thread.h"
 #include "../headers/types.h"
 
@@ -21,12 +23,30 @@ list<string> TCPCommands = {
     "GIVEUP"
 };
 
+// Dictionary of responses
+map<status_t, string> TCPResponseDictionary = {
+        {INFO_NO_PLAYERS_AVAILABLE, "101|No players available \r\n \r\n"},
+        {RESPONSE_OK, "200|OK \r\n \r\n"},
+        {ERROR_BAD_REQUEST, "400|Bad Request \r\n \r\n"},
+        {ERROR_INCORRECT_NAME, "401|Incorrect Name \r\n \r\n"},
+        {ERROR_NAME_TAKEN, "402|Name Taken \r\n \r\n"},
+        {ERROR_PLAYER_NOT_FOUND, "403|Player not Found \r\n \r\n"},
+        {ERROR_PLAYER_OCCUPIED, "404|Player Occupied \r\n \r\n"},
+        {ERROR_BAD_SLOT, "405|Bad Slot \r\n \r\n"},
+        {ERROR_NOT_TURN, "406|Not Turn"},
+        {ERROR_INVALID_COMMAND, "407|Invalid command \r\n \r\n"},
+        {ERROR_COMMAND_OUT_OF_CONTEXT, "408|Command out of context \r\n \r\n"},
+        {ERROR_CONNECTION_LOST, "409|Connection Lost \r\n \r\n"},
+        {ERROR_SERVER_ERROR, "500|Server Error \r\n \r\n"}
+};
+
 //Prototypes
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand);
 status_t parseMessage(string message, T3PCommand *t3pCommand);
-status_t respond(int sockfd, status_t response);
+status_t respond(int sockfd, status_t response, string args[] = NULL);
 status_t checkCommand(T3PCommand t3pCommand, context_t context);
 void clearSlot(int slotNumber);
+void clearEntry(int entryNumber);
 status_t checkPlayerName(string name);
 
 //Main function
@@ -36,6 +56,7 @@ void processClient(int connectedSockfd, int slotNumber)
     context_t context;
     T3PCommand t3pCommand;
     Logger logger;
+    MainDatabaseEntry playerEntry;
 
     // Receive first message and save it formatted in a t3pcommand object
     if ((status = receiveMessage(connectedSockfd, &t3pCommand)) != STATUS_OK)
@@ -61,7 +82,8 @@ void processClient(int connectedSockfd, int slotNumber)
         while (respond(connectedSockfd, status) != STATUS_OK);
         // Close the socket
         close(connectedSockfd);  
-        // Terminate the thread      
+        // Terminate the thread   
+        clearSlot(slotNumber);   
         return;
     }
 
@@ -77,34 +99,33 @@ void processClient(int connectedSockfd, int slotNumber)
             break;
         }
     } 
-
     if (!name_available)
-    {
-        status = ERROR_NAME_TAKEN;
-        respond(connectedSockfd, status);
-    }    
+        while (respond(connectedSockfd, ERROR_NAME_TAKEN) != STATUS_OK);
 
+    // The name is available, so we finally add the player to the database and login
+    context = LOBBY;
+    int entryNumber = mainDatabase.getAvailableEntry();
+    playerEntry.context = context;
+    playerEntry.playerName = t3pCommand.dataList.front();
+    playerEntry.slotNumber = slotNumber;
+    time(&(playerEntry.lastHeartbeat));
+    mainDatabase.setEntry(entryNumber, playerEntry);
+    while (respond(connectedSockfd, RESPONSE_OK) != STATUS_OK);
 
-
-    // Send response to client
-    
-
-
-    //The first thing to do, is to check that the login is correct or the player is not online.
-    //If  
-
+    // Now the player is in the LOBBY. 
 
     // Close the socket
     close(connectedSockfd);
     //Previous ending the thread, we must free the slot.
     clearSlot(slotNumber);
+    clearEntry(entryNumber);
     return;
 }
 
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand)
 {
     char message[TCP_BUFFER_SIZE] = {0};
-    if (recv(sockfd, message, sizeof(message), NULL) < 0)
+    if (recv(sockfd, message, sizeof(message), 0) < 0)
         return ERROR_SERVER_ERROR;
     if (parseMessage(string(message), t3pCommand) != STATUS_OK)
         return ERROR_BAD_REQUEST;
@@ -142,8 +163,12 @@ status_t parseMessage(string message, T3PCommand *t3pCommand)
     return STATUS_OK;
 }
 
-status_t respond(int sockfd, status_t response)
+status_t respond(int sockfd, status_t response, string args[])
 {
+    string message = TCPResponseDictionary[response];
+    const char *c_message = message.c_str(); 
+    if (send(sockfd, c_message, strlen(c_message), 0) < 0)
+        return ERROR_SENDING_MESSAGE;
     return STATUS_OK;
 }
 
@@ -186,16 +211,24 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
                     return status;
             }
             break;
+        // TODO: Add other contexts 
         default:
             return ERROR_SERVER_ERROR;
     }
     return STATUS_OK;
 }
 
+void clearEntry(int entryNumber)
+{
+    MainDatabaseEntry entry;
+    mainDatabase.setEntry(entryNumber, entry);
+}
 
 void clearSlot(int slotNumber)
 {
-    slots[slotNumber] = Slot();
+    slots[slotNumber].available = true;
+    //We don care about clearing the thread id in the slots vector. Just knowing
+    //the slot is available is good enough
 }
 
 status_t checkPlayerName(string name)

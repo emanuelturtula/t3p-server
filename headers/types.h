@@ -17,6 +17,7 @@ enum status_t {
     ERROR_SOCKET_CONFIGURATION,
     ERROR_SOCKET_LISTENING,
     ERROR_SOCKET_READING,
+    ERROR_SENDING_MESSAGE,
     ERROR_GETTING_ADDRINFO,
     ERROR_SOCKET_BINDING,
     ERROR_UDPLISTENER_GETADDRINFO,
@@ -108,7 +109,7 @@ class MainDatabaseEntry {
         int slotNumber = -1;  
         string playerName;
         bool invitationPending = false;
-        string invitingPlayerName;
+        string invitingPlayerName = "";
         context_t context;
         time_t lastHeartbeat;
 };
@@ -118,6 +119,7 @@ class MainDatabase {
     public:
         MainDatabase();
         int getAvailableEntry();
+        int getSlotNumber(int entryNumber);
         list<string> getPlayersOnline();
         list<string> getAvailablePlayers();
         list<string> getOccupiedPlayers();

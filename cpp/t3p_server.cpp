@@ -44,7 +44,7 @@ status_t t3p_server(const char *ip)
     Logger logger;
 
     // Get the bound UDP socket.
-    logger.debugMessage("Getting binded UDP socket...");
+    logger.debugMessage("Getting bound UDP socket...");
     if ((status = get_bound_socket(ip, UDP_PORT_NUMBER, true, &udpSocket)) != STATUS_OK)
     {
         logger.errorHandler.printErrorCode(status);
@@ -98,6 +98,7 @@ status_t t3p_server(const char *ip)
             }
             if (isServerFull)
             {
+                //TODO
                 //Check if client's message is correct (a login). If not,
                 //return corresponding error message, else, return server full message.
             }

@@ -119,6 +119,11 @@ int MainDatabase :: getAvailableEntry()
     return -1;
 }
 
+int MainDatabase :: getSlotNumber(int entryNumber)
+{
+    return this->entries[entryNumber].slotNumber;
+}
+
 list<string> MainDatabase :: getPlayersOnline()
 {   
     lock_guard<mutex> lock(m_database);
