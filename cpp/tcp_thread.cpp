@@ -41,13 +41,15 @@ map<status_t, string> TCPResponseDictionary = {
 };
 
 //Prototypes
-status_t receiveMessage(int sockfd, T3PCommand *t3pCommand);
+status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context);
 status_t parseMessage(string message, T3PCommand *t3pCommand);
 status_t respond(int sockfd, status_t response, string args[] = NULL);
 status_t checkCommand(T3PCommand t3pCommand, context_t context);
 void clearSlot(int slotNumber);
 void clearEntry(int entryNumber);
 status_t checkPlayerName(string name);
+bool checkPlayerIsOnline(string name);
+bool checkPlayerIsAvailable(string name);
 
 //Main function
 void processClient(int connectedSockfd, int slotNumber)
@@ -58,8 +60,9 @@ void processClient(int connectedSockfd, int slotNumber)
     Logger logger;
     MainDatabaseEntry playerEntry;
 
-    // Receive first message and save it formatted in a t3pcommand object
-    if ((status = receiveMessage(connectedSockfd, &t3pCommand)) != STATUS_OK)
+    // Receive first message and save it formatted in a t3pcommand object. Also we check if the command is correct,
+    // that is, if it is a known command and if its arguments are valid.
+    if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
     {
         //Don't know if logging this is useful for us
         logger.errorHandler.printErrorCode(status);
@@ -72,37 +75,8 @@ void processClient(int connectedSockfd, int slotNumber)
         return;
     }
 
-    // We want now to check if the command was a login and if the player name
-    // is compliant.
-    if ((status = checkCommand(t3pCommand, context)) != STATUS_OK)
-    {
-        //Don't know if logging this is useful for us
-        logger.errorHandler.printErrorCode(status);
-        // Respond corresponding status
-        while (respond(connectedSockfd, status) != STATUS_OK);
-        // Close the socket
-        close(connectedSockfd);  
-        // Terminate the thread   
-        clearSlot(slotNumber);   
-        return;
-    }
-
-    // If we could make it to here, it means the command was a login and the name was ok.
-    // Finally, we check if the player name is not taken. dataList from t3pcommand object
-    // should only have one item (the player name).
-    bool name_available = true;
-    for (auto const& playerOnline : mainDatabase.getPlayersOnline())
-    {
-        if (t3pCommand.dataList.front() == playerOnline)
-        {
-            name_available = false;
-            break;
-        }
-    } 
-    if (!name_available)
-        while (respond(connectedSockfd, ERROR_NAME_TAKEN) != STATUS_OK);
-
-    // The name is available, so we finally add the player to the database and login
+    // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
+    // So we finally add the player to the database and change the context to lobby.
     context = LOBBY;
     int entryNumber = mainDatabase.getAvailableEntry();
     playerEntry.context = context;
@@ -113,6 +87,28 @@ void processClient(int connectedSockfd, int slotNumber)
     while (respond(connectedSockfd, RESPONSE_OK) != STATUS_OK);
 
     // Now the player is in the LOBBY. 
+    while (context == LOBBY)
+    {
+        // Read incoming messages
+        if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
+        {
+            //Don't know if logging this is useful for us
+            logger.errorHandler.printErrorCode(status);
+            // Respond corresponding status
+            while (respond(connectedSockfd, status) != STATUS_OK);
+        }
+
+        // If it is a Heartbeat
+        if (t3pCommand.command == "HEARTBEAT")
+        {
+            time(&(playerEntry.lastHeartbeat));
+            mainDatabase.setEntry(entryNumber, playerEntry);
+        }
+        else if (t3pCommand.command == "INVITE")
+        {
+            
+        }
+    }
 
     // Close the socket
     close(connectedSockfd);
@@ -124,11 +120,14 @@ void processClient(int connectedSockfd, int slotNumber)
 
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand)
 {
+    status_t status;
     char message[TCP_BUFFER_SIZE] = {0};
     if (recv(sockfd, message, sizeof(message), 0) < 0)
         return ERROR_SERVER_ERROR;
     if (parseMessage(string(message), t3pCommand) != STATUS_OK)
         return ERROR_BAD_REQUEST;
+    if ((status = checkCommand(*t3pCommand, context)) != STATUS_OK)
+        return status;
     return STATUS_OK;    
 }
 
@@ -194,21 +193,41 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
     {
         // When socket has just been connected, the only possible command is LOGIN 
         case SOCKET_CONNECTED:
+            // If command is not a login, then it's out of context
             if (t3pCommand.command != "LOGIN")
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
-            // TODO: Check player's name
-            if ((status = checkPlayerName(t3pCommand.dataList.front())) != STATUS_OK)
+            string playerName = t3pCommand.dataList.front();
+            // Check if the player's name is compliant
+            if ((status = checkPlayerName(playerName)) != STATUS_OK)
                 return status;
+            // Check if there's a player online with that name. If it is,
+            // then the result is that the name is taken.
+            if (checkPlayerIsOnline(playerName))
+                return ERROR_NAME_TAKEN;
             break;
+        // When a player is in the lobby, it can only invite or logout
         case LOBBY:
-            if ((t3pCommand.command != "INVITE") || 
+            if ((t3pCommand.command != "HEARTBEAT") ||
+                (t3pCommand.command != "INVITE") || 
                 (t3pCommand.command != "RANDOMINVITE") || 
                 (t3pCommand.command != "LOGOUT"))
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
             if (t3pCommand.command == "INVITE")
             {
-                if ((status = checkPlayerName(t3pCommand.dataList.front())) != STATUS_OK)
+                string playerName = t3pCommand.dataList.front();
+                if ((status = checkPlayerName(playerName)) != STATUS_OK)
                     return status;
+                if (!checkPlayerIsOnline(playerName))
+                    return ERROR_PLAYER_NOT_FOUND;
+                if (!checkPlayerIsAvailable(playerName))
+                    return ERROR_PLAYER_OCCUPIED;
+            }
+            if (t3pCommand.command == "RANDOMINVITE")
+            {
+                // If there are not available players, then we return 
+                // that as an info
+                if (mainDatabase.getAvailablePlayers().empty)
+                    return INFO_NO_PLAYERS_AVAILABLE;
             }
             break;
         // TODO: Add other contexts 
@@ -239,4 +258,24 @@ status_t checkPlayerName(string name)
     if (!regex_match(name, nameChecker))
         return ERROR_INCORRECT_NAME;
     return STATUS_OK;
+}
+
+bool checkPlayerIsOnline(string name)
+{
+    for (auto const& playerOnline : mainDatabase.getPlayersOnline())
+    {
+        if (name == playerOnline)
+            return true
+    } 
+    return false;
+}
+
+bool checkPlayerIsAvailable(string name)
+{
+    for (auto const& playerOnline : mainDatabase.getAvailablePlayers())
+    {
+        if (name == playerOnline)
+            return true
+    } 
+    return false;
 }

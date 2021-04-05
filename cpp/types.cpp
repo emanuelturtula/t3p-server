@@ -142,7 +142,10 @@ list<string> MainDatabase :: getAvailablePlayers()
     list<string> availablePlayers;
     for (int i = 0; i < this->entries.size(); i++)
     {
-        if ((! this->entries[i].playerName.empty()) && (this->entries[i].context == LOBBY))
+        //A player is available when the name is not empty, the context is lobby and it has no invitation pending.
+        if ((! this->entries[i].playerName.empty()) && 
+            (this->entries[i].context == LOBBY) &&
+            (! this->entries[i].invitationPending))
             availablePlayers.push_back(this->entries[i].playerName);
     }    
     return availablePlayers;
