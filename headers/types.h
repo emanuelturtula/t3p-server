@@ -47,12 +47,18 @@ enum status_t {
     ERROR_COMMAND_OUT_OF_CONTEXT = 408,
     ERROR_CONNECTION_LOST = 409,
     //5xx: Errors from server
-    ERROR_SERVER_ERROR = 500
+    ERROR_SERVER_ERROR = 500,
+
+    ACCEPT,
+    DECLINE
 };
 
 enum context_t {
     SOCKET_CONNECTED,
-    LOBBY,  
+    LOBBY,
+    WAITING_RESPONSE,
+    WAITING_OTHER_PLAYER_RESPONSE,
+    LOGOUT
 };
 
 class ErrorHandler {
@@ -91,6 +97,7 @@ class T3PResponse {
 class T3PCommand {
     public:
         T3PCommand();
+        void clear();
         string command;
         list<string> dataList;
 };
@@ -106,12 +113,16 @@ class MainDatabaseEntry {
     public:
         MainDatabaseEntry();
         // Use slotNumber = -1 to indicate the entry space is not being used.
-        int slotNumber = -1;  
+        int slotNumber = -1;
+        // This will be used by the referee to send invitations  
+        int connectedSockfd;
         string playerName;
         bool invitationPending = false;
         string invitingPlayerName = "";
         context_t context;
         time_t lastHeartbeat;
+        // This time will be set by the referee once it sends the invitation
+        time_t invitationTime;
 };
 
 class MainDatabase {
@@ -120,10 +131,15 @@ class MainDatabase {
         MainDatabase();
         int getAvailableEntry();
         int getSlotNumber(int entryNumber);
+        int getEntryNumber(string playerName);
+        bool getInvitationPending(int entryNumber);
+        time_t getInvitationTime(int entryNumber);
         list<string> getPlayersOnline();
         list<string> getAvailablePlayers();
         list<string> getOccupiedPlayers();
         void setEntry(int entryNumber, MainDatabaseEntry entry); 
-
+        void setContext(int entryNumber, context_t context);
+        void setInvitation(int entryNumber, string invitingPlayer);
+        void udpateHeartbeat(int entryNumber);
 };
 
