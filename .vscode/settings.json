@@ -1,12 +1,8 @@
 {
     "files.associations": {
-        "iostream": "cpp",
-        "mutex": "cpp",
-        "cstdlib": "cpp",
-        "*.tcc": "cpp",
-        "fstream": "cpp",
-        "thread": "cpp",
-        "system_error": "cpp",
-        "chrono": "cpp"
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "vector": "cpp"
     }
 }

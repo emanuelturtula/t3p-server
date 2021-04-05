@@ -124,6 +124,26 @@ int MainDatabase :: getSlotNumber(int entryNumber)
     return this->entries[entryNumber].slotNumber;
 }
 
+int MainDatabase :: getEntryNumber(string playerName)
+{
+    for (int entryNumber = 0; entryNumber < this->entries.size(); entryNumber++)
+    {
+        if (this->entries[entryNumber].playerName == playerName)
+            return entryNumber;
+    }
+    return -1;
+}
+
+bool MainDatabase :: getInvitationPending(int entryNumber)
+{
+    return this->entries[entryNumber].invitationPending;
+}
+
+time_t MainDatabase :: getInvitationTime(int entryNumber)
+{
+    return this->entries[entryNumber].invitationTime;
+}
+
 list<string> MainDatabase :: getPlayersOnline()
 {   
     lock_guard<mutex> lock(m_database);
@@ -171,11 +191,34 @@ void MainDatabase :: setEntry(int entryNumber, MainDatabaseEntry entry)
     this->entries[entryNumber] = entry;
 }
 
+void MainDatabase :: setContext(int entryNumber, context_t context)
+{
+    this->entries[entryNumber].context = context;
+}
+
+void MainDatabase :: setInvitation(int entryNumber, string invitingPlayer)
+{
+    this->entries[entryNumber].invitationPending = true;
+    this->entries[entryNumber].invitingPlayerName = invitingPlayer;
+}
+
+void MainDatabase :: udpateHeartbeat(int entryNumber)
+{
+    time(&(this->entries[entryNumber].lastHeartbeat));
+}
+
 /**
  * Methods for T3PCommand
  * */
 T3PCommand :: T3PCommand()
 {
-    
+    this->command = "";
+    this->dataList.clear();
+}
+
+void T3PCommand :: clear()
+{
+    this->command = "";
+    this->dataList.clear();
 }
 
