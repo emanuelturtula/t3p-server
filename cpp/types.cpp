@@ -144,6 +144,12 @@ time_t MainDatabase :: getInvitationTime(int entryNumber)
     return this->entries[entryNumber].invitationTime;
 }
 
+vector<MainDatabaseEntry> MainDatabase :: getEntries()
+{
+    lock_guard<mutex> lock(m_database);
+    return this->entries;
+}
+
 list<string> MainDatabase :: getPlayersOnline()
 {   
     lock_guard<mutex> lock(m_database);

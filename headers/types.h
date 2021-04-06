@@ -51,7 +51,8 @@ enum context_t {
     LOBBY,
     WAITING_RESPONSE,
     WAITING_OTHER_PLAYER_RESPONSE,
-    LOGOUT
+    LOGOUT,
+    HEARTBEAT_EXPIRED
 };
 
 class ErrorHandler {
@@ -127,6 +128,7 @@ class MainDatabase {
         int getEntryNumber(string playerName);
         bool getInvitationPending(int entryNumber);
         time_t getInvitationTime(int entryNumber);
+        vector<MainDatabaseEntry> getEntries();
         list<string> getPlayersOnline();
         list<string> getAvailablePlayers();
         list<string> getOccupiedPlayers();

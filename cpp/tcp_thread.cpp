@@ -62,6 +62,7 @@ void processClient(int connectedSockfd, int slotNumber)
     Logger logger;
     MainDatabaseEntry playerEntry;
     time_t timeout;
+    int entryNumber;
 
     // Set the socket reception timeout to 1 second
     struct timeval tv;
@@ -77,26 +78,23 @@ void processClient(int connectedSockfd, int slotNumber)
         logger.errorHandler.printErrorCode(status);
         // Respond corresponding status
         while (respond(connectedSockfd, status) != STATUS_OK);
-        // Close the socket
-        close(connectedSockfd);  
-        // Clear the slot taken     
-        clearSlot(slotNumber);
-        return;
+    }
+    else
+    {
+        // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
+        // So we finally add the player to the database and change the context to lobby.
+        context = LOBBY;
+        entryNumber = mainDatabase.getAvailableEntry();
+        playerEntry.context = context;
+        playerEntry.playerName = t3pCommand.dataList.front();
+        playerEntry.slotNumber = slotNumber;
+        time(&(playerEntry.lastHeartbeat));
+        mainDatabase.setEntry(entryNumber, playerEntry);
+        while (respond(connectedSockfd, RESPONSE_OK) != STATUS_OK);
     }
 
-    // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
-    // So we finally add the player to the database and change the context to lobby.
-    context = LOBBY;
-    int entryNumber = mainDatabase.getAvailableEntry();
-    playerEntry.context = context;
-    playerEntry.playerName = t3pCommand.dataList.front();
-    playerEntry.slotNumber = slotNumber;
-    time(&(playerEntry.lastHeartbeat));
-    mainDatabase.setEntry(entryNumber, playerEntry);
-    while (respond(connectedSockfd, RESPONSE_OK) != STATUS_OK);
-
-    // Now the player is in the LOBBY. 
-    while (context != LOGOUT)
+    // The first time we will enter here only if the context is LOBBY
+    while ((context != SOCKET_CONNECTED) && (context != LOGOUT) && (context != HEARTBEAT_EXPIRED))
     {
         while (context == LOBBY)
         {
@@ -188,9 +186,12 @@ void processClient(int connectedSockfd, int slotNumber)
 
     // Close the socket
     close(connectedSockfd);
-    //Previous ending the thread, we must free the slot.
+    // Previous ending the thread, we must free the slot.
     clearSlot(slotNumber);
-    clearEntry(entryNumber);
+    // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
+    //from the database
+    if (context != SOCKET_CONNECTED)
+        clearEntry(entryNumber);
     return;
 }
 
@@ -291,9 +292,9 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
             break;
         // When a player is in the lobby, it can only invite or logout
         case LOBBY:
-            if ((t3pCommand.command != "HEARTBEAT") ||
-                (t3pCommand.command != "INVITE") || 
-                (t3pCommand.command != "RANDOMINVITE") || 
+            if ((t3pCommand.command != "HEARTBEAT") &&
+                (t3pCommand.command != "INVITE") && 
+                (t3pCommand.command != "RANDOMINVITE") && 
                 (t3pCommand.command != "LOGOUT"))
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
             if (t3pCommand.command == "INVITE")
@@ -322,8 +323,8 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
             break;
         case WAITING_RESPONSE:
-            if ((t3pCommand.command != "HEARTBEAT") ||
-                (t3pCommand.command != "ACCEPT") ||
+            if ((t3pCommand.command != "HEARTBEAT") &&
+                (t3pCommand.command != "ACCEPT") &&
                 (t3pCommand.command != "DECLINE"))
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
         default:
