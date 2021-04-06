@@ -206,12 +206,14 @@ status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context)
 {
     status_t status;
     char message[TCP_BUFFER_SIZE] = {0};
-    if (recv(sockfd, message, sizeof(message), 0) < 0)
-        return ERROR_SERVER_ERROR;
-    if (parseMessage(string(message), t3pCommand) != STATUS_OK)
-        return ERROR_BAD_REQUEST;
-    if ((status = checkCommand(*t3pCommand, context)) != STATUS_OK)
-        return status;
+    int bytes = recv(sockfd, message, sizeof(message), 0);
+    if (bytes > 0)
+    {
+        if (parseMessage(string(message), t3pCommand) != STATUS_OK)
+            return ERROR_BAD_REQUEST;
+        if ((status = checkCommand(*t3pCommand, context)) != STATUS_OK)
+            return status;
+    }
     return STATUS_OK;    
 }
 

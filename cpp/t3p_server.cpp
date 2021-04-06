@@ -16,25 +16,11 @@
 
 using namespace std;
 
-/**
- * Initialize global variables
- * The slots vector is used to check if there are free spaces in the server and to associate threads with slots.
- * The mainDatabase contains information of each player online: slot number, name, invitation pending, 
- * last heartbeat, context...
- * */
-
 vector<Slot> slots(MAX_PLAYERS_ONLINE);
 MainDatabase mainDatabase;
 
-/**
- * Prototypes visible only in this file
- * */
 status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd);
 
-/**
- * The server itself. Here we create both UDP and TCP sockets in listening state, and manage threads
- * for client's processing.
- * */
 status_t t3p_server(const char *ip)
 {
     status_t status;
@@ -64,7 +50,7 @@ status_t t3p_server(const char *ip)
     // Now that we have both sockets listening, we open a new thread for managing 
     // the UDP messages, whilst in this thread we wait for a client to try a connection
     thread udp_thread(processUDPMesages, udpSocket, ip); 
-
+    
     while (1)
     {
         logger.debugMessage("Putting TCP socket in listening state...");
@@ -104,8 +90,6 @@ status_t t3p_server(const char *ip)
             }
         }
     }
-    
-
     return STATUS_OK;
 }
 
