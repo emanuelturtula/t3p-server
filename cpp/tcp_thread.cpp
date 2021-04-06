@@ -263,6 +263,7 @@ status_t parseMessage(string message, T3PCommand *t3pCommand)
 status_t checkCommand(T3PCommand t3pCommand, context_t context)
 {
     status_t status;
+    string playerName;
     //First we need to check if the incomming command is present
     //in a list of possible commands.
     if (find(TCPCommands.begin(), TCPCommands.end(), t3pCommand.command) == TCPCommands.end())
@@ -277,7 +278,7 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
             // If command is not a login, then it's out of context
             if (t3pCommand.command != "LOGIN")
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
-            string playerName = t3pCommand.dataList.front();
+            playerName = t3pCommand.dataList.front();
             // Check if the player's name is compliant
             if ((status = checkPlayerName(playerName)) != STATUS_OK)
                 return status;
@@ -295,7 +296,7 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
                 return ERROR_COMMAND_OUT_OF_CONTEXT;
             if (t3pCommand.command == "INVITE")
             {
-                string playerName = t3pCommand.dataList.front();
+                playerName = t3pCommand.dataList.front();
                 if ((status = checkPlayerName(playerName)) != STATUS_OK)
                     return status;
                 if (!checkPlayerIsOnline(playerName))
@@ -366,7 +367,7 @@ bool checkPlayerIsOnline(string name)
     for (auto const& playerOnline : mainDatabase.getPlayersOnline())
     {
         if (name == playerOnline)
-            return true
+            return true;
     } 
     return false;
 }
@@ -376,7 +377,7 @@ bool checkPlayerIsAvailable(string name)
     for (auto const& playerOnline : mainDatabase.getAvailablePlayers())
     {
         if (name == playerOnline)
-            return true
+            return true;
     } 
     return false;
 }
