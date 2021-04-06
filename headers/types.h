@@ -100,6 +100,7 @@ class Slot {
     public:
         Slot();
         bool available;
+        // Not used
         thread associatedThread;
 };
 
@@ -117,6 +118,7 @@ class MainDatabaseEntry {
         time_t lastHeartbeat;
         // This time will be set by the referee once it sends the invitation
         time_t invitationTime;
+        bool heartbeatExpired = false;
 };
 
 class MainDatabase {
@@ -125,6 +127,7 @@ class MainDatabase {
         MainDatabase();
         int getAvailableEntry();
         int getSlotNumber(int entryNumber);
+        context_t getContext(int entryNumber);
         int getEntryNumber(string playerName);
         bool getInvitationPending(int entryNumber);
         time_t getInvitationTime(int entryNumber);
@@ -135,6 +138,7 @@ class MainDatabase {
         void setEntry(int entryNumber, MainDatabaseEntry entry); 
         void setContext(int entryNumber, context_t context);
         void setInvitation(int entryNumber, string invitingPlayer);
+        void setHeartbeatExpired(int entryNumber);
         void udpateHeartbeat(int entryNumber);
 };
 

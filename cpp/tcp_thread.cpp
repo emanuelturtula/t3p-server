@@ -57,7 +57,7 @@ bool checkPlayerIsAvailable(string name);
 void processClient(int connectedSockfd, int slotNumber)
 {
     status_t status;
-    context_t context;
+    context_t context = SOCKET_CONNECTED;
     T3PCommand t3pCommand;
     Logger logger;
     MainDatabaseEntry playerEntry;
@@ -73,12 +73,7 @@ void processClient(int connectedSockfd, int slotNumber)
     // Receive first message and save it formatted in a t3pcommand object. Also we check if the command is correct,
     // that is, if it is a known command and if its arguments are valid.
     if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
-    {
-        //Don't know if logging this is useful for us
         logger.errorHandler.printErrorCode(status);
-        // Respond corresponding status
-        while (respond(connectedSockfd, status) != STATUS_OK);
-    }
     else
     {
         // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
@@ -93,11 +88,18 @@ void processClient(int connectedSockfd, int slotNumber)
         while (respond(connectedSockfd, RESPONSE_OK) != STATUS_OK);
     }
 
+    bool heartbeat_expired = false; 
     // The first time we will enter here only if the context is LOBBY
-    while ((context != SOCKET_CONNECTED) && (context != LOGOUT) && (context != HEARTBEAT_EXPIRED))
+    while ((context != SOCKET_CONNECTED) && (context != LOGOUT) && (!heartbeat_expired))
     {
-        while (context == LOBBY)
+        while ((context == LOBBY))
         {
+            if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
+            {
+                heartbeat_expired = true;
+                break;
+            }
+            // If it is a Heartbeat
             t3pCommand.clear();
             // Read incoming messages
             if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
@@ -107,7 +109,7 @@ void processClient(int connectedSockfd, int slotNumber)
                 // Respond corresponding status
                 while (respond(connectedSockfd, status) != STATUS_OK);
             }
-            // If it is a Heartbeat
+            
             if (t3pCommand.command == "HEARTBEAT")
                 // When a heartbeat arrives, we only update our entry.
                 mainDatabase.udpateHeartbeat(entryNumber);
@@ -139,9 +141,15 @@ void processClient(int connectedSockfd, int slotNumber)
                 context = WAITING_OTHER_PLAYER_RESPONSE;
                 mainDatabase.setContext(entryNumber, context);
             }
+
         }
         while (context == WAITING_OTHER_PLAYER_RESPONSE)
         {
+            if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
+            {
+                heartbeat_expired = true;
+                break;
+            }
             t3pCommand.clear();
             // Read incoming messages
             if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
@@ -158,6 +166,11 @@ void processClient(int connectedSockfd, int slotNumber)
         }
         while (context == WAITING_RESPONSE)
         {
+            if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
+            {
+                heartbeat_expired = true;
+                break;
+            }
             // TODO: add timeout check.
             // This context will only be access if the referee threads puts this thread in this context 
             t3pCommand.clear();
@@ -184,15 +197,17 @@ void processClient(int connectedSockfd, int slotNumber)
         }
     }
 
+    if (context == SOCKET_CONNECTED)
+    // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
+    //from the database. We have to tell the client that the login was incorrect
+        respond(connectedSockfd, status);
+    else 
+        clearEntry(entryNumber);
+            
     // Close the socket
     close(connectedSockfd);
     // Previous ending the thread, we must free the slot.
     clearSlot(slotNumber);
-    // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
-    //from the database
-    if (context != SOCKET_CONNECTED)
-        clearEntry(entryNumber);
-    return;
 }
 
 /**

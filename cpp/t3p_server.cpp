@@ -12,6 +12,7 @@
 #include "../headers/types.h" 
 #include "../headers/udp_thread.h"
 #include "../headers/tcp_thread.h"
+#include "../headers/heartbeat_thread.h"
 #include "../headers/config.h"
 
 using namespace std;
@@ -50,7 +51,7 @@ status_t t3p_server(const char *ip)
     // Now that we have both sockets listening, we open a new thread for managing 
     // the UDP messages, whilst in this thread we wait for a client to try a connection
     thread udp_thread(processUDPMesages, udpSocket, ip); 
-    
+    thread heartbeat_thread(heartbeatChecker);
     while (1)
     {
         logger.debugMessage("Putting TCP socket in listening state...");
@@ -77,7 +78,10 @@ status_t t3p_server(const char *ip)
                 {
                     logger.debugMessage("Free slot found.");
                     slots[slotNumber].available = false;
-                    slots[slotNumber].associatedThread = thread(processClient, connectedSocket, slotNumber);
+                    logger.debugMessage("About to create a thread.");
+                    thread clientThread(processClient, connectedSocket, slotNumber);
+                    clientThread.detach();
+                    logger.debugMessage("Thread created.");
                     isServerFull = false;
                     break;
                 }
