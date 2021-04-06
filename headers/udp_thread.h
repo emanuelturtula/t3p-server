@@ -2,4 +2,4 @@
 
 #include "types.h"
 
-void processUDPMesages(int udpSocket);
+void processUDPMesages(int udpSocket, const char *ip);

@@ -63,7 +63,7 @@ status_t t3p_server(const char *ip)
 
     // Now that we have both sockets listening, we open a new thread for managing 
     // the UDP messages, whilst in this thread we wait for a client to try a connection
-    thread udp_thread(processUDPMesages, udpSocket); 
+    thread udp_thread(processUDPMesages, udpSocket, ip); 
 
     while (1)
     {
