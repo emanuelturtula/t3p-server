@@ -124,6 +124,12 @@ int MainDatabase :: getSlotNumber(int entryNumber)
     return this->entries[entryNumber].slotNumber;
 }
 
+context_t MainDatabase :: getContext(int entryNumber)
+{
+    lock_guard<mutex> lock(m_database);
+    return this->entries[entryNumber].context;
+}
+
 int MainDatabase :: getEntryNumber(string playerName)
 {
     for (int entryNumber = 0; entryNumber < this->entries.size(); entryNumber++)
@@ -142,6 +148,12 @@ bool MainDatabase :: getInvitationPending(int entryNumber)
 time_t MainDatabase :: getInvitationTime(int entryNumber)
 {
     return this->entries[entryNumber].invitationTime;
+}
+
+vector<MainDatabaseEntry> MainDatabase :: getEntries()
+{
+    lock_guard<mutex> lock(m_database);
+    return this->entries;
 }
 
 list<string> MainDatabase :: getPlayersOnline()
@@ -200,6 +212,11 @@ void MainDatabase :: setInvitation(int entryNumber, string invitingPlayer)
 {
     this->entries[entryNumber].invitationPending = true;
     this->entries[entryNumber].invitingPlayerName = invitingPlayer;
+}
+
+void MainDatabase :: setHeartbeatExpired(int entryNumber)
+{
+    this->entries[entryNumber].heartbeatExpired = true;
 }
 
 void MainDatabase :: udpateHeartbeat(int entryNumber)

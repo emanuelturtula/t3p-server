@@ -7,6 +7,8 @@
 #define TCP_MAX_PENDING_CONNECTIONS 5
 #define MAX_PLAYERS_ONLINE 50
 
+#define HEARTBEAT_SECONDS_TIMEOUT 10
+
 // Colours
 #define RESET   "\033[0m"
 #define BLACK   "\033[30m"      /* Black */
