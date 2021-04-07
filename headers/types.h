@@ -55,6 +55,13 @@ enum context_t {
     HEARTBEAT_EXPIRED
 };
 
+enum invitation_status_t {
+    REJECTED,
+    ACCEPTED,
+    PENDING,
+    NONE
+};
+
 class ErrorHandler {
     public:
         ErrorHandler();
@@ -112,7 +119,7 @@ class MainDatabaseEntry {
         // This will be used by the referee to send invitations  
         int connectedSockfd;
         string playerName;
-        bool invitationPending = false;
+        invitation_status_t invitationStatus = NONE;
         string invitingPlayerName = "";
         context_t context;
         time_t lastHeartbeat;
@@ -138,6 +145,7 @@ class MainDatabase {
         void setEntry(int entryNumber, MainDatabaseEntry entry); 
         void setContext(int entryNumber, context_t context);
         void setInvitation(int entryNumber, string invitingPlayer);
+        void setInvitation(int entryNumber, invitation_status_t invitationStatus);
         void setHeartbeatExpired(int entryNumber);
         void udpateHeartbeat(int entryNumber);
 };

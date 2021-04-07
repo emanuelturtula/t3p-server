@@ -177,7 +177,7 @@ list<string> MainDatabase :: getAvailablePlayers()
         //A player is available when the name is not empty, the context is lobby and it has no invitation pending.
         if ((! this->entries[i].playerName.empty()) && 
             (this->entries[i].context == LOBBY) &&
-            (! this->entries[i].invitationPending))
+            (this->entries[i].invitationStatus == NONE))
             availablePlayers.push_back(this->entries[i].playerName);
     }    
     return availablePlayers;
@@ -210,8 +210,13 @@ void MainDatabase :: setContext(int entryNumber, context_t context)
 
 void MainDatabase :: setInvitation(int entryNumber, string invitingPlayer)
 {
-    this->entries[entryNumber].invitationPending = true;
+    this->entries[entryNumber].invitationStatus = PENDING;
     this->entries[entryNumber].invitingPlayerName = invitingPlayer;
+}
+
+void MainDatabase :: setInvitation(int entryNumber, invitation_status_t invitationStatus)
+{
+    this->entries[entryNumber].invitationStatus = invitationStatus;
 }
 
 void MainDatabase :: setHeartbeatExpired(int entryNumber)
