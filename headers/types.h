@@ -98,6 +98,7 @@ class T3PCommand {
         void clear();
         string command;
         list<string> dataList;
+        bool isNewCommand = false;
 };
 
 class Slot {

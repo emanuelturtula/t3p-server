@@ -4,6 +4,7 @@
         "list": "cpp",
         "string": "cpp",
         "vector": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "iostream": "cpp"
     }
 }

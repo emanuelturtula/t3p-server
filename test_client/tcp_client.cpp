@@ -8,8 +8,16 @@
 #include <string>
 #include <string.h>
 #include <unistd.h>
+#include <thread>
+#include <mutex>
+
 
 using namespace std;
+
+mutex m;
+
+void readerThread(int connectedSockfd);
+void writeOut(const char *message);
 
 int main()
 {
@@ -17,7 +25,6 @@ int main()
     int bytes;
     string message;
     const char *c_message;
-    char buffer[1024];
     struct sockaddr_in server = {0};
     const char *ip = "127.0.0.1";
 
@@ -27,20 +34,46 @@ int main()
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd, (struct sockaddr *)&server, sizeof(server)) != 0)
         return EXIT_FAILURE;
-
-    while (1)
+    
+    thread reader(readerThread, sockfd);
+    int error_code = 0;
+    socklen_t error_code_size = sizeof(error_code);
+    getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
+    while (error_code == 0)
     {
-        memset(&buffer, 0, sizeof(buffer));
         message = "";
+        writeOut("Type a message:");
         getline(cin, message);
         message += " \r\n \r\n";
         c_message = message.c_str();
         send(sockfd, c_message, strlen(c_message), 0);
-        bytes = recv(sockfd, &buffer, sizeof(buffer), 0);
-        if (bytes > 0)
-            cout << buffer;
+        message = "Sending: " + message;
+        writeOut(message.c_str());
+        sleep(1);
+        getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
     }
-
-
     return EXIT_SUCCESS;
+}
+
+void readerThread(int connectedSockfd)
+{
+    int bytes;
+    int error_code = 0;
+    char buffer[1024];
+    socklen_t error_code_size = sizeof(error_code);
+    getsockopt(connectedSockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
+    while(error_code == 0)
+    {
+        memset(&buffer, 0, sizeof(buffer));
+        bytes = recv(connectedSockfd, &buffer, sizeof(buffer), 0);
+        if (bytes > 0)
+            writeOut(buffer);
+        getsockopt(connectedSockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
+    }
+}
+
+void writeOut(const char *message)
+{
+    lock_guard<mutex> lock(m);
+    cout << message << endl;
 }

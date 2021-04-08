@@ -8,7 +8,7 @@
 #define MAX_PLAYERS_ONLINE 50
 
 #define HEARTBEAT_SECONDS_TIMEOUT 10
-#define INVITATION_SECONDS_TIMEOUT 10
+#define INVITATION_SECONDS_TIMEOUT 9000 //for testing
 
 // Colours
 #define RESET   "\033[0m"

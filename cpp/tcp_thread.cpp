@@ -104,7 +104,7 @@ void processClient(int connectedSockfd, int slotNumber)
     // that is, if it is a known command and if its arguments are valid.
     if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
         logger.errorHandler.printErrorCode(status);
-    else
+    if (t3pCommand.isNewCommand)
     {
         setsockopt(connectedSockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
         // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
@@ -184,7 +184,7 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
         // Receive a message (wait only one second)
         if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
             respond(connectedSockfd, status);
-        else
+        if (t3pCommand.isNewCommand)
         {
             // Translate the command string to a command enum
             command = TCPCommandTranslator[t3pCommand.command];
@@ -277,7 +277,7 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
             logger.errorHandler.printErrorCode(status);
             respond(connectedSockfd, status);
         }
-        else 
+        if (t3pCommand.isNewCommand)
         {
             command = TCPCommandTranslator[t3pCommand.command];
             switch(command)
@@ -333,7 +333,7 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
             logger.errorHandler.printErrorCode(status);
             respond(connectedSockfd, status);
         }
-        else
+        if (t3pCommand.isNewCommand)
         {
             command = TCPCommandTranslator[t3pCommand.command];
             switch(command)
@@ -354,7 +354,7 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
                 invitedPlayerEntry.invitingPlayerName = "";
                 invitedPlayerEntry.readyToPlayWith = "";
                 mainDatabase.setEntry(entryNumber, myEntry);
-                mainDatabase.setEntry(entryNumber, invitedPlayerEntry);
+                mainDatabase.setEntry(invitedPlayerEntryNumber, invitedPlayerEntry);
                 context = LOBBY;
                 sendInviteResponse(connectedSockfd, DECLINE);
                 break;
@@ -369,7 +369,7 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
                 invitedPlayerEntry.invitingPlayerName = "";
                 invitedPlayerEntry.readyToPlayWith = myEntry.playerName;
                 mainDatabase.setEntry(entryNumber, myEntry);
-                mainDatabase.setEntry(entryNumber, invitedPlayerEntry);
+                mainDatabase.setEntry(invitedPlayerEntryNumber, invitedPlayerEntry);
                 context = READY_TO_PLAY;
                 sendInviteResponse(connectedSockfd, ACCEPT);
                 break;
@@ -377,6 +377,7 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
     }
     return context;
 }
+
 /**
  * Parse a message and put the result in a T3PCommand object.
  *
@@ -396,6 +397,7 @@ status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context)
             return ERROR_BAD_REQUEST;
         if ((status = checkCommand(*t3pCommand, context)) != STATUS_OK)
             return status;
+        t3pCommand->isNewCommand = true;
     }
     return STATUS_OK;    
 }
@@ -522,8 +524,6 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
                 default:
                     return ERROR_COMMAND_OUT_OF_CONTEXT;
             }
-        default:
-            return ERROR_SERVER_ERROR;
     }
     return STATUS_OK;
 }

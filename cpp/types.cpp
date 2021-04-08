@@ -270,5 +270,6 @@ void T3PCommand :: clear()
 {
     this->command = "";
     this->dataList.clear();
+    this->isNewCommand = false;
 }
 
