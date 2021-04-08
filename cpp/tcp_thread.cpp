@@ -69,13 +69,18 @@ map<string, tcpcommand_t> TCPCommandTranslator = {
     {"GIVEUP", GIVEUP}
 };
 
+
+context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
+context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
+context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
+
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context);
 status_t parseMessage(string message, T3PCommand *t3pCommand);
-status_t respond(int sockfd, status_t response, string args[] = NULL);
-status_t sendInvitation(int sockfd, string invitingPlayer);
 status_t checkCommand(T3PCommand t3pCommand, context_t context);
-void clearSlot(int slotNumber);
-void clearEntry(int entryNumber);
+status_t respond(int sockfd, status_t response);
+status_t sendInviteFrom(int sockfd, string invitingPlayer);
+status_t sendInvitationTimeout(int sockfd);
+
 status_t checkPlayerName(string name);
 bool checkPlayerIsOnline(string name);
 bool checkPlayerIsAvailable(string name);
@@ -117,7 +122,7 @@ void processClient(int connectedSockfd, int slotNumber)
 
     bool heartbeat_expired = false; 
     // The first time we will enter here only if the context is LOBBY
-    while ((context != SOCKET_CONNECTED) && (context != LOGOUT) && (!heartbeat_expired))
+    while ((context != SOCKET_CONNECTED) && (context != DISCONNECT) && (!heartbeat_expired))
     {
         switch(context)
         {
@@ -128,29 +133,8 @@ void processClient(int connectedSockfd, int slotNumber)
                 context = waitingResponseContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
             case WAITING_OTHER_PLAYER_RESPONSE:
+                context = waitingOtherPlayerResponseContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
-        }
-        
-        while (context == WAITING_OTHER_PLAYER_RESPONSE)
-        {
-            if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
-            {
-                heartbeat_expired = true;
-                break;
-            }
-            t3pCommand.clear();
-            // Read incoming messages
-            if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
-            {
-                //Don't know if logging this is useful for us
-                logger.errorHandler.printErrorCode(status);
-                // Respond corresponding status
-                while (respond(connectedSockfd, status) != STATUS_OK);
-            }
-            // If it is a Heartbeat
-            if (t3pCommand.command == "HEARTBEAT")
-                // When a heartbeat arrives, we only update our entry.
-                mainDatabase.udpateHeartbeat(entryNumber);
         }
     }
 
@@ -159,12 +143,12 @@ void processClient(int connectedSockfd, int slotNumber)
     //from the database. We have to tell the client that the login was incorrect
         respond(connectedSockfd, status);
     else 
-        clearEntry(entryNumber);
+        mainDatabase.clearEntry(entryNumber);
             
     // Close the socket
     close(connectedSockfd);
     // Previous ending the thread, we must free the slot.
-    clearSlot(slotNumber);
+    slots[slotNumber].clear();
 }
 
 context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired)
@@ -174,9 +158,9 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
     context_t context = LOBBY;
     T3PCommand t3pCommand;
     tcpcommand_t command;
-    MainDatabaseEntry playerEntry;
-    
-    playerEntry = mainDatabase.getEntries()[entryNumber];
+    MainDatabaseEntry myEntry;
+
+    myEntry = mainDatabase.getEntries()[entryNumber];
     string invitePlayer;
 
     while ((context == LOBBY))
@@ -186,6 +170,7 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
         if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
         {
             *heartbeat_expired = true;
+            context = DISCONNECT;
             break;
         }
         // Check if we have invitation pending
@@ -197,33 +182,36 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
         // Receive a message (wait only one second)
         if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
             respond(connectedSockfd, status);
-        // Translate the command string to a command enum
-        command = TCPCommandTranslator[t3pCommand.command];
-        switch(command)
+        else
         {
-            case HEARTBEAT:
-                // If it is a heartbeat, update the entry
-                mainDatabase.udpateHeartbeat(entryNumber);
-                break;
-            case INVITE:
-                // If it is an invite, we already checked the format and that the player is available.
-                invitePlayer = t3pCommand.dataList.front();
-                mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), playerEntry.playerName);
-                respond(connectedSockfd, RESPONSE_OK);
-                mainDatabase.setContext(entryNumber, context); 
-                context = WAITING_OTHER_PLAYER_RESPONSE;
-                break;
-            case RANDOMINVITE:
-                // Random invite is similar to invite, with the only difference we choose a random player. 
-                // We need to review this because it is not random at all, but we don't wanna waste time
-                // here.
-                list<string> availablePlayers = mainDatabase.getAvailablePlayers();
-                invitePlayer = availablePlayers.front();
-                mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), playerEntry.playerName);
-                respond(connectedSockfd, RESPONSE_OK);
-                mainDatabase.setContext(entryNumber, context);
-                context = WAITING_OTHER_PLAYER_RESPONSE;
-                break;
+            // Translate the command string to a command enum
+            command = TCPCommandTranslator[t3pCommand.command];
+            switch(command)
+            {
+                case HEARTBEAT:
+                    // If it is a heartbeat, update the entry
+                    mainDatabase.udpateHeartbeat(entryNumber);
+                    break;
+                case INVITE:
+                    // If it is an invite, we already checked the format and that the player is available.
+                    invitePlayer = t3pCommand.dataList.front();
+                    mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
+                    respond(connectedSockfd, RESPONSE_OK);
+                    mainDatabase.setContext(entryNumber, context); 
+                    context = WAITING_OTHER_PLAYER_RESPONSE;
+                    break;
+                case RANDOMINVITE:
+                    // Random invite is similar to invite, with the only difference we choose a random player. 
+                    // We need to review this because it is not random at all, but we don't wanna waste time
+                    // here.
+                    list<string> availablePlayers = mainDatabase.getAvailablePlayers();
+                    invitePlayer = availablePlayers.front();
+                    mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
+                    respond(connectedSockfd, RESPONSE_OK);
+                    mainDatabase.setContext(entryNumber, context);
+                    context = WAITING_OTHER_PLAYER_RESPONSE;
+                    break;
+            }
         }
     }
     return context;
@@ -236,6 +224,8 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
     context_t context = WAITING_RESPONSE;
     T3PCommand t3pCommand;
     time_t invitation_time;
+    tcpcommand_t command;
+    MainDatabaseEntry myEntry;
     // In this context we send INVITEFROM and wait for an answer. Possibilities are
     // decline, accept, or timeout
     sendInviteFrom(connectedSockfd, mainDatabase.getEntries()[entryNumber].invitingPlayerName);
@@ -248,6 +238,7 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
         if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
         {
             *heartbeat_expired = true;
+            context = DISCONNECT;
             break;
         }
 
@@ -257,37 +248,115 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
             // to the client
             sendInvitationTimeout(connectedSockfd);
             // Then we need to set the invitation to Rejected
-            mainDatabase.setInvitation(entryNumber, REJECTED);
-            context = LOBBY;
-            mainDatabase.setContext(entryNumber, context);
+            myEntry = mainDatabase.getEntries()[entryNumber];
+            myEntry.context = LOBBY;
+            myEntry.invitationStatus = REJECTED;
+            mainDatabase.setEntry(entryNumber, myEntry);
             break;
         }
-        // TODO: add timeout check.
-        // This context will only be access if the referee threads puts this thread in this context 
         
         // Read incoming messages
         if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
         {
-            //Don't know if logging this is useful for us
             logger.errorHandler.printErrorCode(status);
-            // Respond corresponding status
-            while (respond(connectedSockfd, status) != STATUS_OK);
+            respond(connectedSockfd, status);
         }
-        if (t3pCommand.command == "HEARTBEAT")
-            // When a heartbeat arrives, we only update our entry.
-            mainDatabase.udpateHeartbeat(entryNumber);
-        else if (t3pCommand.command == "ACCEPT")
+        else 
         {
-            // Do sth.
-        }
-        else if (t3pCommand.command == "DECLINE")
-        {
-            // Do sth. Go back to lobby and clear the invitation from 
+            command = TCPCommandTranslator[t3pCommand.command];
+            switch(command)
+            {
+                case HEARTBEAT:
+                    mainDatabase.udpateHeartbeat(entryNumber);
+                    break;
+                case ACCEPT:
+                    myEntry = mainDatabase.getEntries()[entryNumber];
+                    myEntry.invitationStatus = ACCEPTED;
+                    myEntry.context = READY_TO_PLAY;
+                    mainDatabase.setEntry(entryNumber, myEntry);
+                    context = READY_TO_PLAY;
+                    break;
+                case DECLINE:
+                    myEntry = mainDatabase.getEntries()[entryNumber];
+                    myEntry.invitationStatus = REJECTED;
+                    myEntry.context = LOBBY;
+                    mainDatabase.setEntry(entryNumber, myEntry);
+                    context = LOBBY;
+                    break;
+            }
         }
     }
     return context;
 }
 
+context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired)
+{
+    context_t context = WAITING_OTHER_PLAYER_RESPONSE;
+    T3PCommand t3pCommand;
+    status_t status;
+    Logger logger;
+    tcpcommand_t command;
+    MainDatabaseEntry myEntry = mainDatabase.getEntries()[entryNumber];
+    int invitedPlayerEntryNumber = mainDatabase.getInvitedPlayerEntryNumber(myEntry.playerName); 
+    MainDatabaseEntry invitedPlayerEntry;
+
+    while (context == WAITING_OTHER_PLAYER_RESPONSE)
+    {
+        if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
+        {
+            *heartbeat_expired = true;
+            context = DISCONNECT;
+            break;
+        }
+        t3pCommand.clear();
+        // Read incoming messages
+        if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
+        {
+            logger.errorHandler.printErrorCode(status);
+            respond(connectedSockfd, status);
+        }
+        else
+        {
+            command = TCPCommandTranslator[t3pCommand.command];
+            switch(command)
+            {
+                case HEARTBEAT:
+                    mainDatabase.udpateHeartbeat(entryNumber);
+                    break;
+            }
+        }
+        switch(mainDatabase.getEntries()[invitedPlayerEntryNumber].invitationStatus)
+        {
+            case REJECTED:
+                myEntry = mainDatabase.getEntries()[entryNumber];
+                invitedPlayerEntry = mainDatabase.getEntries()[invitedPlayerEntryNumber];
+                myEntry.context = LOBBY;
+                myEntry.readyToPlayWith = "";
+                invitedPlayerEntry.invitationStatus = NONE;
+                invitedPlayerEntry.invitingPlayerName = "";
+                invitedPlayerEntry.readyToPlayWith = "";
+                mainDatabase.setEntry(entryNumber, myEntry);
+                mainDatabase.setEntry(entryNumber, invitedPlayerEntry);
+                context = LOBBY;
+                break;
+            case PENDING:
+                break; 
+            case ACCEPTED:
+                myEntry = mainDatabase.getEntries()[entryNumber];
+                invitedPlayerEntry = mainDatabase.getEntries()[invitedPlayerEntryNumber];
+                myEntry.context = READY_TO_PLAY;
+                myEntry.readyToPlayWith = invitedPlayerEntry.playerName;
+                invitedPlayerEntry.invitationStatus = NONE;
+                invitedPlayerEntry.invitingPlayerName = "";
+                invitedPlayerEntry.readyToPlayWith = myEntry.playerName;
+                mainDatabase.setEntry(entryNumber, myEntry);
+                mainDatabase.setEntry(entryNumber, invitedPlayerEntry);
+                context = READY_TO_PLAY;
+                break;
+        }
+    }
+    return context;
+}
 /**
  * Parse a message and put the result in a T3PCommand object.
  *
@@ -360,66 +429,79 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
 {
     status_t status;
     string playerName;
-    //First we need to check if the incomming command is present
-    //in a list of possible commands.
+    list<string> availablePlayers;
+    tcpcommand_t command;
+    // First we need to check if the incomming command is present
+    // in a list of possible commands.
     if (find(TCPCommands.begin(), TCPCommands.end(), t3pCommand.command) == TCPCommands.end())
         return ERROR_BAD_REQUEST;
 
+    // Translate the command to a tcpcommand type to ease the later code
+    command = TCPCommandTranslator[t3pCommand.command];
     // Now that we know that the command actually exists, we need 
     // to check based on the context if it is valid.
     switch(context)
     {
-        // When socket has just been connected, the only possible command is LOGIN 
         case SOCKET_CONNECTED:
-            // If command is not a login, then it's out of context
-            if (t3pCommand.command != "LOGIN")
-                return ERROR_COMMAND_OUT_OF_CONTEXT;
-            playerName = t3pCommand.dataList.front();
-            // Check if the player's name is compliant
-            if ((status = checkPlayerName(playerName)) != STATUS_OK)
-                return status;
-            // Check if there's a player online with that name. If it is,
-            // then the result is that the name is taken.
-            if (checkPlayerIsOnline(playerName))
-                return ERROR_NAME_TAKEN;
+            switch(command)
+            {
+                case LOGIN:
+                    playerName = t3pCommand.dataList.front();
+                    if ((status = checkPlayerName(playerName)) != STATUS_OK)
+                        return status;
+                    if (checkPlayerIsOnline(playerName))
+                        return ERROR_NAME_TAKEN;
+                    break;
+                default:
+                    return ERROR_COMMAND_OUT_OF_CONTEXT;
+            }            
             break;
-        // When a player is in the lobby, it can only invite or logout
         case LOBBY:
-            if ((t3pCommand.command != "HEARTBEAT") &&
-                (t3pCommand.command != "INVITE") && 
-                (t3pCommand.command != "RANDOMINVITE") && 
-                (t3pCommand.command != "LOGOUT"))
-                return ERROR_COMMAND_OUT_OF_CONTEXT;
-            if (t3pCommand.command == "INVITE")
+            switch(command)
             {
-                playerName = t3pCommand.dataList.front();
-                if ((status = checkPlayerName(playerName)) != STATUS_OK)
-                    return status;
-                if (!checkPlayerIsOnline(playerName))
-                    return ERROR_PLAYER_NOT_FOUND;
-                if (!checkPlayerIsAvailable(playerName))
-                    return ERROR_PLAYER_OCCUPIED;
-            }
-            if (t3pCommand.command == "RANDOMINVITE")
-            {
-                // If there are not available players, then we return 
-                // that as an info
-                list<string> availablePlayers = mainDatabase.getAvailablePlayers();
-                if (availablePlayers.empty())
-                    return INFO_NO_PLAYERS_AVAILABLE;
+                case HEARTBEAT:
+                    break;
+                case INVITE:
+                    playerName = t3pCommand.dataList.front();
+                    if ((status = checkPlayerName(playerName)) != STATUS_OK)
+                        return status;
+                    if (!checkPlayerIsOnline(playerName))
+                        return ERROR_PLAYER_NOT_FOUND;
+                    if (!checkPlayerIsAvailable(playerName))
+                        return ERROR_PLAYER_OCCUPIED;
+                    break;
+                case RANDOMINVITE:
+                    availablePlayers = mainDatabase.getAvailablePlayers();
+                    if (availablePlayers.empty())
+                        return INFO_NO_PLAYERS_AVAILABLE;
+                    break;
+                case LOGOUT:
+                    break;
+                default:
+                    return ERROR_COMMAND_OUT_OF_CONTEXT;
             }
             break;
-            // When a player is waiting for another players response, it can only send
-            // heartbeats.
         case WAITING_OTHER_PLAYER_RESPONSE:
-            if (t3pCommand.command != "HEARTBEAT")
-                return ERROR_COMMAND_OUT_OF_CONTEXT;
+            switch(command)
+            {
+                case HEARTBEAT:
+                    break;
+                default: 
+                    return ERROR_COMMAND_OUT_OF_CONTEXT;
+            }
             break;
         case WAITING_RESPONSE:
-            if ((t3pCommand.command != "HEARTBEAT") &&
-                (t3pCommand.command != "ACCEPT") &&
-                (t3pCommand.command != "DECLINE"))
-                return ERROR_COMMAND_OUT_OF_CONTEXT;
+            switch(command)
+            {
+                case HEARTBEAT:
+                    break;
+                case ACCEPT:
+                    break;
+                case DECLINE:
+                    break;
+                default:
+                    return ERROR_COMMAND_OUT_OF_CONTEXT;
+            }
         default:
             return ERROR_SERVER_ERROR;
     }
@@ -453,19 +535,6 @@ status_t sendInvitationTimeout(int sockfd)
     if (send(sockfd, c_message, strlen(c_message), 0) < 0)
         return ERROR_SENDING_MESSAGE;
     return STATUS_OK;
-}
-
-void clearEntry(int entryNumber)
-{
-    MainDatabaseEntry entry;
-    mainDatabase.setEntry(entryNumber, entry);
-}
-
-void clearSlot(int slotNumber)
-{
-    slots[slotNumber].available = true;
-    //We don care about clearing the thread id in the slots vector. Just knowing
-    //the slot is available is good enough
 }
 
 status_t checkPlayerName(string name)

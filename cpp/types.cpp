@@ -86,6 +86,12 @@ Slot :: Slot()
     this->available = true; 
 }
 
+void Slot :: clear()
+{
+    this->available = true;
+}
+
+
 /**
  * Methods for MainDatabaseEntry
  * */
@@ -100,6 +106,12 @@ MainDatabaseEntry :: MainDatabaseEntry()
 MainDatabase :: MainDatabase()
 {
     this->entries.resize(MAX_PLAYERS_ONLINE);
+}
+
+void MainDatabase :: clearEntry(int entryNumber)
+{
+    MainDatabaseEntry entry;
+    this->entries[entryNumber] = entry;
 }
 
 // We have to do it this way to ensure only one thread reads the database,
@@ -138,16 +150,6 @@ int MainDatabase :: getEntryNumber(string playerName)
             return entryNumber;
     }
     return -1;
-}
-
-bool MainDatabase :: getInvitationPending(int entryNumber)
-{
-    return this->entries[entryNumber].invitationPending;
-}
-
-time_t MainDatabase :: getInvitationTime(int entryNumber)
-{
-    return this->entries[entryNumber].invitationTime;
 }
 
 vector<MainDatabaseEntry> MainDatabase :: getEntries()
@@ -195,6 +197,16 @@ list<string> MainDatabase :: getOccupiedPlayers()
     return occupiedPlayers;
 }
 
+int MainDatabase :: getInvitedPlayerEntryNumber(string playerName)
+{
+    lock_guard<mutex> lock(m_database);
+    for (int i = 0; i < this->entries.size(); i++)
+    {
+        if (this->entries[i].invitingPlayerName == playerName)
+            return i;
+    }
+    return -1;
+}
 // It is not necessary to place a mutex in this function, because we know
 // that when we call it, there won't be two or more threads with the 
 // same entry number, so writing is actually secured (if used wisely).
