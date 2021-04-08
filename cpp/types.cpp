@@ -185,6 +185,22 @@ list<string> MainDatabase :: getAvailablePlayers()
     return availablePlayers;
 }
 
+list<string> MainDatabase :: getAvailablePlayers(string excludePlayer)
+{   
+    lock_guard<mutex> lock(m_database);
+    list<string> availablePlayers;
+    for (int i = 0; i < this->entries.size(); i++)
+    {
+        //A player is available when the name is not empty, the context is lobby and it has no invitation pending.
+        if ((! this->entries[i].playerName.empty()) && 
+            (this->entries[i].context == LOBBY) &&
+            (this->entries[i].invitationStatus == NONE) &&
+            (this->entries[i].playerName != excludePlayer))
+            availablePlayers.push_back(this->entries[i].playerName);
+    }    
+    return availablePlayers;
+}
+
 list<string> MainDatabase :: getOccupiedPlayers()
 {   
     lock_guard<mutex> lock(m_database);

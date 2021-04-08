@@ -136,6 +136,7 @@ class MainDatabase {
         vector<MainDatabaseEntry> getEntries();
         list<string> getPlayersOnline();
         list<string> getAvailablePlayers();
+        list<string> getAvailablePlayers(string excludePlayer);
         list<string> getOccupiedPlayers();
         void setEntry(int entryNumber, MainDatabaseEntry entry); 
         void setContext(int entryNumber, context_t context);

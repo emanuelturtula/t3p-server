@@ -2,7 +2,7 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "Build Debug Functions",
+            "label": "Build server",
             "command": "/usr/bin/g++",
             "args": [
                 "-g",
@@ -10,6 +10,29 @@
                 "${workspaceFolder}/cpp/*.cpp",
                 "-o",
                 "${workspaceFolder}/debug/debug_server.out"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault":  true
+            },
+            "detail": "compiler: /usr/bin/g++"
+        },
+        {
+            "type": "cppbuild",
+            "label": "Build client",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-g",
+                "-pthread",
+                "${workspaceFolder}/test_client/*.cpp",
+                "-o",
+                "${workspaceFolder}/test_client/tcp_client.out"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

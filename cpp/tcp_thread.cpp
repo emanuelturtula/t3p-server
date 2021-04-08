@@ -99,14 +99,14 @@ void processClient(int connectedSockfd, int slotNumber)
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
-    setsockopt(connectedSockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-
+    
     // Receive first message and save it formatted in a t3pcommand object. Also we check if the command is correct,
     // that is, if it is a known command and if its arguments are valid.
     if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
         logger.errorHandler.printErrorCode(status);
     else
     {
+        setsockopt(connectedSockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
         // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
         // So we finally add the player to the database and change the context to lobby.
         context = LOBBY;
@@ -116,7 +116,7 @@ void processClient(int connectedSockfd, int slotNumber)
         playerEntry.slotNumber = slotNumber;
         time(&(playerEntry.lastHeartbeat));
         mainDatabase.setEntry(entryNumber, playerEntry);
-        while (respond(connectedSockfd, RESPONSE_OK) != STATUS_OK);
+        respond(connectedSockfd, RESPONSE_OK);
     }
 
     bool heartbeat_expired = false; 
@@ -139,7 +139,7 @@ void processClient(int connectedSockfd, int slotNumber)
 
     if (context == SOCKET_CONNECTED)
     // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
-    //from the database. We have to tell the client that the login was incorrect
+    // from the database. We have to tell the client that the login was incorrect
         respond(connectedSockfd, status);
     else 
         mainDatabase.clearEntry(entryNumber);
@@ -194,21 +194,32 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
                 case INVITE:
                     // If it is an invite, we already checked the format and that the player is available.
                     invitePlayer = t3pCommand.dataList.front();
-                    mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
-                    respond(connectedSockfd, RESPONSE_OK);
-                    mainDatabase.setContext(entryNumber, context); 
-                    context = WAITING_OTHER_PLAYER_RESPONSE;
+                    // Check that the username is not myself    
+                    if (myEntry.playerName == invitePlayer)
+                        respond(connectedSockfd, ERROR_INCORRECT_NAME);
+                    else 
+                    {
+                        mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
+                        respond(connectedSockfd, RESPONSE_OK);
+                        context = WAITING_OTHER_PLAYER_RESPONSE;
+                        mainDatabase.setContext(entryNumber, context); 
+                    }
                     break;
                 case RANDOMINVITE:
                     // Random invite is similar to invite, with the only difference we choose a random player. 
                     // We need to review this because it is not random at all, but we don't wanna waste time
                     // here.
-                    list<string> availablePlayers = mainDatabase.getAvailablePlayers();
-                    invitePlayer = availablePlayers.front();
-                    mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
-                    respond(connectedSockfd, RESPONSE_OK);
-                    mainDatabase.setContext(entryNumber, context);
-                    context = WAITING_OTHER_PLAYER_RESPONSE;
+                    list<string> availablePlayers = mainDatabase.getAvailablePlayers(myEntry.playerName);
+                    if (availablePlayers.empty())
+                        respond(connectedSockfd, INFO_NO_PLAYERS_AVAILABLE);
+                    else 
+                    {
+                        invitePlayer = availablePlayers.front();
+                        mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
+                        respond(connectedSockfd, RESPONSE_OK);
+                        mainDatabase.setContext(entryNumber, context);
+                        context = WAITING_OTHER_PLAYER_RESPONSE;
+                    }
                     break;
             }
         }
@@ -241,7 +252,7 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
             break;
         }
 
-        if (time(NULL) - invitation_time > INVITATION_SECONDS_TIMEOUT)
+        if ((time(NULL) - invitation_time) > INVITATION_SECONDS_TIMEOUT)
         {
             // If we entered here, it means the invitation timed out. So we first tell that 
             // to the client
