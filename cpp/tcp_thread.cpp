@@ -52,9 +52,7 @@ map<status_t, string> TCPResponseDictionary = {
     {ERROR_INVALID_COMMAND, "407|Invalid command \r\n \r\n"},
     {ERROR_COMMAND_OUT_OF_CONTEXT, "408|Command out of context \r\n \r\n"},
     {ERROR_CONNECTION_LOST, "409|Connection Lost \r\n \r\n"},
-    {ERROR_SERVER_ERROR, "500|Server Error \r\n \r\n"},
-    {ACCEPT, "ACCEPT \r\n \r\n"},
-    {DECLINE, "DECLINE \r\n \r\n"}
+    {ERROR_SERVER_ERROR, "500|Server Error \r\n \r\n"}
 };
 
 map<string, tcpcommand_t> TCPCommandTranslator = {
@@ -80,6 +78,7 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context);
 status_t respond(int sockfd, status_t response);
 status_t sendInviteFrom(int sockfd, string invitingPlayer);
 status_t sendInvitationTimeout(int sockfd);
+status_t sendInviteResponse(int sockfd, tcpcommand_t command);
 
 status_t checkPlayerName(string name);
 bool checkPlayerIsOnline(string name);
@@ -338,6 +337,7 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
                 mainDatabase.setEntry(entryNumber, myEntry);
                 mainDatabase.setEntry(entryNumber, invitedPlayerEntry);
                 context = LOBBY;
+                sendInviteResponse(connectedSockfd, DECLINE);
                 break;
             case PENDING:
                 break; 
@@ -352,6 +352,7 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
                 mainDatabase.setEntry(entryNumber, myEntry);
                 mainDatabase.setEntry(entryNumber, invitedPlayerEntry);
                 context = READY_TO_PLAY;
+                sendInviteResponse(connectedSockfd, ACCEPT);
                 break;
         }
     }
@@ -508,7 +509,7 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
     return STATUS_OK;
 }
 
-status_t respond(int sockfd, status_t response, string args[])
+status_t respond(int sockfd, status_t response)
 {
     string message = TCPResponseDictionary[response];
     const char *c_message = message.c_str(); 
@@ -532,6 +533,25 @@ status_t sendInvitationTimeout(int sockfd)
 {
     string message = "INVITATIONTIMEOUT \r\n \r\n";
     const char *c_message = message.c_str();
+    if (send(sockfd, c_message, strlen(c_message), 0) < 0)
+        return ERROR_SENDING_MESSAGE;
+    return STATUS_OK;
+}
+
+status_t sendInviteResponse(int sockfd, tcpcommand_t command)
+{
+    string message;
+    const char *c_message;
+    switch(command)
+    {
+        case ACCEPT:
+            message = "ACCEPT \r\n \r\n";
+            break;
+        case DECLINE:
+            message = "DECLINE \r\n \r\n";
+            break;
+    }
+    c_message = message.c_str();
     if (send(sockfd, c_message, strlen(c_message), 0) < 0)
         return ERROR_SENDING_MESSAGE;
     return STATUS_OK;

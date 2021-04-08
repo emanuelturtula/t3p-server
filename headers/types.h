@@ -41,9 +41,6 @@ enum status_t {
     ERROR_CONNECTION_LOST = 409,
     //5xx: Errors from server
     ERROR_SERVER_ERROR = 500,
-
-    ACCEPT,
-    DECLINE
 };
 
 enum context_t {
