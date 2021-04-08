@@ -134,6 +134,9 @@ void processClient(int connectedSockfd, int slotNumber)
             case WAITING_OTHER_PLAYER_RESPONSE:
                 context = waitingOtherPlayerResponseContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
+            case READY_TO_PLAY:
+                while(1);
+                break;
         }
     }
 
@@ -158,7 +161,7 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
     T3PCommand t3pCommand;
     tcpcommand_t command;
     MainDatabaseEntry myEntry;
-
+    mainDatabase.setContext(entryNumber, context);
     myEntry = mainDatabase.getEntries()[entryNumber];
     string invitePlayer;
 
@@ -236,9 +239,11 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
     time_t invitation_time;
     tcpcommand_t command;
     MainDatabaseEntry myEntry;
+    mainDatabase.setContext(entryNumber, context);
+    myEntry = mainDatabase.getEntries()[entryNumber];
     // In this context we send INVITEFROM and wait for an answer. Possibilities are
     // decline, accept, or timeout
-    sendInviteFrom(connectedSockfd, mainDatabase.getEntries()[entryNumber].invitingPlayerName);
+    sendInviteFrom(connectedSockfd, myEntry.invitingPlayerName);
 
     // We need to register this moment to later check if the invitation timed out.
     time(&invitation_time);
@@ -262,6 +267,7 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
             myEntry.context = LOBBY;
             myEntry.invitationStatus = REJECTED;
             mainDatabase.setEntry(entryNumber, myEntry);
+            context = LOBBY;
             break;
         }
         
@@ -306,7 +312,9 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
     status_t status;
     Logger logger;
     tcpcommand_t command;
-    MainDatabaseEntry myEntry = mainDatabase.getEntries()[entryNumber];
+    MainDatabaseEntry myEntry;
+    mainDatabase.setContext(entryNumber, context);
+    myEntry = mainDatabase.getEntries()[entryNumber];
     int invitedPlayerEntryNumber = mainDatabase.getInvitedPlayerEntryNumber(myEntry.playerName); 
     MainDatabaseEntry invitedPlayerEntry;
 
