@@ -86,6 +86,12 @@ Slot :: Slot()
     this->available = true; 
 }
 
+void Slot :: clear()
+{
+    this->available = true;
+}
+
+
 /**
  * Methods for MainDatabaseEntry
  * */
@@ -100,6 +106,12 @@ MainDatabaseEntry :: MainDatabaseEntry()
 MainDatabase :: MainDatabase()
 {
     this->entries.resize(MAX_PLAYERS_ONLINE);
+}
+
+void MainDatabase :: clearEntry(int entryNumber)
+{
+    MainDatabaseEntry entry;
+    this->entries[entryNumber] = entry;
 }
 
 // We have to do it this way to ensure only one thread reads the database,
@@ -140,16 +152,6 @@ int MainDatabase :: getEntryNumber(string playerName)
     return -1;
 }
 
-bool MainDatabase :: getInvitationPending(int entryNumber)
-{
-    return this->entries[entryNumber].invitationPending;
-}
-
-time_t MainDatabase :: getInvitationTime(int entryNumber)
-{
-    return this->entries[entryNumber].invitationTime;
-}
-
 vector<MainDatabaseEntry> MainDatabase :: getEntries()
 {
     lock_guard<mutex> lock(m_database);
@@ -177,7 +179,23 @@ list<string> MainDatabase :: getAvailablePlayers()
         //A player is available when the name is not empty, the context is lobby and it has no invitation pending.
         if ((! this->entries[i].playerName.empty()) && 
             (this->entries[i].context == LOBBY) &&
-            (! this->entries[i].invitationPending))
+            (this->entries[i].invitationStatus == NONE))
+            availablePlayers.push_back(this->entries[i].playerName);
+    }    
+    return availablePlayers;
+}
+
+list<string> MainDatabase :: getAvailablePlayers(string excludePlayer)
+{   
+    lock_guard<mutex> lock(m_database);
+    list<string> availablePlayers;
+    for (int i = 0; i < this->entries.size(); i++)
+    {
+        //A player is available when the name is not empty, the context is lobby and it has no invitation pending.
+        if ((! this->entries[i].playerName.empty()) && 
+            (this->entries[i].context == LOBBY) &&
+            (this->entries[i].invitationStatus == NONE) &&
+            (this->entries[i].playerName != excludePlayer))
             availablePlayers.push_back(this->entries[i].playerName);
     }    
     return availablePlayers;
@@ -195,6 +213,16 @@ list<string> MainDatabase :: getOccupiedPlayers()
     return occupiedPlayers;
 }
 
+int MainDatabase :: getInvitedPlayerEntryNumber(string playerName)
+{
+    lock_guard<mutex> lock(m_database);
+    for (int i = 0; i < this->entries.size(); i++)
+    {
+        if (this->entries[i].invitingPlayerName == playerName)
+            return i;
+    }
+    return -1;
+}
 // It is not necessary to place a mutex in this function, because we know
 // that when we call it, there won't be two or more threads with the 
 // same entry number, so writing is actually secured (if used wisely).
@@ -210,8 +238,13 @@ void MainDatabase :: setContext(int entryNumber, context_t context)
 
 void MainDatabase :: setInvitation(int entryNumber, string invitingPlayer)
 {
-    this->entries[entryNumber].invitationPending = true;
+    this->entries[entryNumber].invitationStatus = PENDING;
     this->entries[entryNumber].invitingPlayerName = invitingPlayer;
+}
+
+void MainDatabase :: setInvitation(int entryNumber, invitation_status_t invitationStatus)
+{
+    this->entries[entryNumber].invitationStatus = invitationStatus;
 }
 
 void MainDatabase :: setHeartbeatExpired(int entryNumber)
@@ -237,5 +270,6 @@ void T3PCommand :: clear()
 {
     this->command = "";
     this->dataList.clear();
+    this->isNewCommand = false;
 }
 

@@ -51,7 +51,9 @@ status_t t3p_server(const char *ip)
     // Now that we have both sockets listening, we open a new thread for managing 
     // the UDP messages, whilst in this thread we wait for a client to try a connection
     thread udp_thread(processUDPMesages, udpSocket, ip); 
-    thread heartbeat_thread(heartbeatChecker);
+
+    // Disable for testing other functions
+    //thread heartbeat_thread(heartbeatChecker);
     while (1)
     {
         logger.debugMessage("Putting TCP socket in listening state...");
@@ -101,6 +103,7 @@ status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd)
 {
     Logger logger;   
     int sock_type;
+    int optval = 1;
     struct sockaddr_in server = {0};
 
     if (sockfd == NULL)
@@ -117,17 +120,14 @@ status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd)
         sock_type = SOCK_STREAM;
 
     if ((*sockfd = socket(AF_INET, sock_type, 0)) < 0) 
-    { 
-        logger.errorHandler.printErrorCode(ERROR_SOCKET_CREATION);
-        logger.printMessage(ERROR_SOCKET_CREATION); 
         return ERROR_SOCKET_CREATION;
-    }
+
+    setsockopt((*sockfd), SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 
     // Bind the socket
     if (bind(*sockfd, (struct sockaddr *)&server, sizeof(server)) < 0) 
     {
         close(*sockfd);
-        logger.errorHandler.printErrorCode(ERROR_SOCKET_BINDING); 
         return ERROR_SOCKET_BINDING;
     }
   

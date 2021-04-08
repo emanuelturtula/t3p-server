@@ -41,9 +41,6 @@ enum status_t {
     ERROR_CONNECTION_LOST = 409,
     //5xx: Errors from server
     ERROR_SERVER_ERROR = 500,
-
-    ACCEPT,
-    DECLINE
 };
 
 enum context_t {
@@ -51,8 +48,15 @@ enum context_t {
     LOBBY,
     WAITING_RESPONSE,
     WAITING_OTHER_PLAYER_RESPONSE,
-    LOGOUT,
-    HEARTBEAT_EXPIRED
+    READY_TO_PLAY,
+    DISCONNECT
+};
+
+enum invitation_status_t {
+    REJECTED,
+    ACCEPTED,
+    PENDING,
+    NONE
 };
 
 class ErrorHandler {
@@ -94,14 +98,14 @@ class T3PCommand {
         void clear();
         string command;
         list<string> dataList;
+        bool isNewCommand = false;
 };
 
 class Slot {
     public:
         Slot();
+        void clear();
         bool available;
-        // Not used
-        thread associatedThread;
 };
 
 class MainDatabaseEntry {
@@ -112,12 +116,11 @@ class MainDatabaseEntry {
         // This will be used by the referee to send invitations  
         int connectedSockfd;
         string playerName;
-        bool invitationPending = false;
+        invitation_status_t invitationStatus = NONE;
         string invitingPlayerName = "";
         context_t context;
         time_t lastHeartbeat;
-        // This time will be set by the referee once it sends the invitation
-        time_t invitationTime;
+        string readyToPlayWith = "";
         bool heartbeatExpired = false;
 };
 
@@ -125,19 +128,21 @@ class MainDatabase {
     vector<MainDatabaseEntry> entries;
     public:
         MainDatabase();
+        void clearEntry(int entryNumber);
         int getAvailableEntry();
         int getSlotNumber(int entryNumber);
         context_t getContext(int entryNumber);
         int getEntryNumber(string playerName);
-        bool getInvitationPending(int entryNumber);
-        time_t getInvitationTime(int entryNumber);
+        int getInvitedPlayerEntryNumber(string playerName);
         vector<MainDatabaseEntry> getEntries();
         list<string> getPlayersOnline();
         list<string> getAvailablePlayers();
+        list<string> getAvailablePlayers(string excludePlayer);
         list<string> getOccupiedPlayers();
         void setEntry(int entryNumber, MainDatabaseEntry entry); 
         void setContext(int entryNumber, context_t context);
         void setInvitation(int entryNumber, string invitingPlayer);
+        void setInvitation(int entryNumber, invitation_status_t invitationStatus);
         void setHeartbeatExpired(int entryNumber);
         void udpateHeartbeat(int entryNumber);
 };
