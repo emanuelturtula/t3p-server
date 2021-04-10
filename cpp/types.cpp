@@ -298,10 +298,26 @@ MatchEntry :: MatchEntry()
 {
     int i;
     this->slots.resize(9);
-    for (i = 0; i < this->slots.size(); i++)
-    {
-        this->slots[i] = EMPTY;
-    }
+    this->clearSlots();
+}
+
+void MatchEntry :: clearEntry()
+{
+    MatchEntry entry;
+    this->clearSlots();
+    this->circlePlayer = "";
+    this->crossPlayer = "";
+    this->winner = "";
+    this->plays = "";
+    this->matchEnded = false;
+    this->matchEndStatus = NORMAL;
+    this->circleGiveUp = false;
+    this->crossGiveUp = false;
+    this->circlePlayerEndConfirmation = false;
+    this->crossPlayerEndConfirmation = false;
+    this->circlePlayerLostConnection = false;
+    this->crossPlayerLostConnection = false;
+    this->free_entry = true;
 }
 
 void MatchEntry :: clearSlots()

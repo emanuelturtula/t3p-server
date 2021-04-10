@@ -5,6 +5,7 @@
         "string": "cpp",
         "vector": "cpp",
         "system_error": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "regex": "cpp"
     }
 }

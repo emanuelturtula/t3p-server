@@ -153,10 +153,16 @@ class MainDatabase {
         void udpateHeartbeat(int entryNumber);
 };
 
-enum MatchSlot{
+enum MatchSlot {
     CIRCLE,
     CROSS,
     EMPTY
+};
+
+enum MatchEndStatus {
+    CONNECTION_LOST,
+    TIMEOUT,
+    NORMAL
 };
 
 class MatchEntry {
@@ -168,7 +174,16 @@ class MatchEntry {
         string winner = "";
         string plays;
         bool matchEnded = false;
+        MatchEndStatus matchEndStatus = NORMAL;
+        bool circleGiveUp = false;
+        bool crossGiveUp = false;
+        bool circlePlayerEndConfirmation = false;
+        bool crossPlayerEndConfirmation = false;
+        bool circlePlayerLostConnection = false;
+        bool crossPlayerLostConnection = false;
+
         MatchEntry();
+        void clearEntry();
         void clearSlots();
         bool isSlotEmpty(int slotNumber);
         void markSlot(int slotNumber, MatchSlot slotType);
