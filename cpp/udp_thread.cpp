@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <map>
 #include <list>
+#include <regex>
 #include "../headers/udp_thread.h"
 #include "../headers/config.h"
 
@@ -147,11 +148,15 @@ status_t parseUDPMessage(string message, T3PCommand *t3pCommand)
 
 status_t checkCommand(T3PCommand t3pCommand)
 {
+    regex ip_checker("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
     if ((t3pCommand.command != "DISCOVER") && (t3pCommand.command != "DISCOVERBROADCAST"))
         return ERROR_BAD_REQUEST;
     if (t3pCommand.command == "DISCOVER")
     {
-        // TODO: Check if ip has a valid format using regex
+        if (!regex_match(t3pCommand.dataList.front(), ip_checker))
+            return ERROR_BAD_REQUEST;
+        if (t3pCommand.dataList.front() != SERVER_IP)
+            return ERROR_BAD_REQUEST;
     }
     return STATUS_OK;
 }
