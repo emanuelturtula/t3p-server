@@ -12,6 +12,7 @@ using namespace std;
 // Global variables defined in another file
 extern vector<Slot> slots;
 extern MainDatabase mainDatabase;
+extern vector<MatchEntry> matchDatabase;
 
 // List of possible TCP commands
 list<string> TCPCommands = {
@@ -35,7 +36,9 @@ enum tcpcommand_t {
     DECLINE,
     RANDOMINVITE,
     MARKSLOT,
-    GIVEUP
+    GIVEUP,
+    OK,
+    BAD
 };
 
 // Dictionary of responses
@@ -64,13 +67,17 @@ map<string, tcpcommand_t> TCPCommandTranslator = {
     {"DECLINE", DECLINE},
     {"RANDOMINVITE", RANDOMINVITE},
     {"MARKSLOT", MARKSLOT},
-    {"GIVEUP", GIVEUP}
+    {"GIVEUP", GIVEUP},
+    {"200", OK},
+    {"400", BAD}
 };
 
 
 context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
 context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
 context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
+context_t readyToPlayContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
+context_t matchContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
 
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context);
 status_t parseMessage(string message, T3PCommand *t3pCommand);
@@ -79,10 +86,15 @@ status_t respond(int sockfd, status_t response);
 status_t sendInviteFrom(int sockfd, string invitingPlayer);
 status_t sendInvitationTimeout(int sockfd);
 status_t sendInviteResponse(int sockfd, tcpcommand_t command);
+status_t sendTurnMessage(int sockfd, int matchEntryNumber, bool myTurn);
+status_t sendMessage(int sockfd, string message);
+
 
 status_t checkPlayerName(string name);
 bool checkPlayerIsOnline(string name);
 bool checkPlayerIsAvailable(string name);
+
+bool isHeartbeatExpired(bool *heartbeat_expired, int entryNumber);
 
 //Main function
 void processClient(int connectedSockfd, int slotNumber)
@@ -114,6 +126,7 @@ void processClient(int connectedSockfd, int slotNumber)
         playerEntry.context = context;
         playerEntry.playerName = t3pCommand.dataList.front();
         playerEntry.slotNumber = slotNumber;
+        playerEntry.connectedSockfd = connectedSockfd;
         time(&(playerEntry.lastHeartbeat));
         mainDatabase.setEntry(entryNumber, playerEntry);
         respond(connectedSockfd, RESPONSE_OK);
@@ -135,7 +148,10 @@ void processClient(int connectedSockfd, int slotNumber)
                 context = waitingOtherPlayerResponseContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
             case READY_TO_PLAY:
-                while(1);
+                context = readyToPlayContext(connectedSockfd, entryNumber, &heartbeat_expired);
+                break;
+            case MATCH:
+                context = matchContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
         }
     }
@@ -167,14 +183,11 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
 
     while ((context == LOBBY))
     {
-        t3pCommand.clear();
         // Check if heartbeat is expired
-        if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
-        {
-            *heartbeat_expired = true;
-            context = DISCONNECT;
-            break;
-        }
+        if (isHeartbeatExpired(heartbeat_expired, entryNumber))
+            return DISCONNECT;
+
+        t3pCommand.clear();
         // Check if we have invitation pending
         if (mainDatabase.getEntries()[entryNumber].invitationStatus == PENDING)
         {
@@ -249,14 +262,10 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, bool *hea
     time(&invitation_time);
     while (context == WAITING_RESPONSE)
     {
-        t3pCommand.clear();
-        if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
-        {
-            *heartbeat_expired = true;
-            context = DISCONNECT;
-            break;
-        }
+        if (isHeartbeatExpired(heartbeat_expired, entryNumber))
+            return DISCONNECT;
 
+        t3pCommand.clear();
         if ((time(NULL) - invitation_time) > INVITATION_SECONDS_TIMEOUT)
         {
             // If we entered here, it means the invitation timed out. So we first tell that 
@@ -320,12 +329,8 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
 
     while (context == WAITING_OTHER_PLAYER_RESPONSE)
     {
-        if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
-        {
-            *heartbeat_expired = true;
-            context = DISCONNECT;
-            break;
-        }
+        if (isHeartbeatExpired(heartbeat_expired, entryNumber))
+            return DISCONNECT;
         t3pCommand.clear();
         // Read incoming messages
         if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
@@ -374,6 +379,154 @@ context_t waitingOtherPlayerResponseContext(int connectedSockfd, int entryNumber
                 sendInviteResponse(connectedSockfd, ACCEPT);
                 break;
         }
+    }
+    return context;
+}
+
+context_t readyToPlayContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired)
+{
+    status_t status;
+    context_t context = READY_TO_PLAY;
+    T3PCommand t3pCommand;
+    Logger logger;
+    tcpcommand_t command;
+
+    while (context == READY_TO_PLAY)
+    {
+        if (isHeartbeatExpired(heartbeat_expired, entryNumber))
+            return DISCONNECT;
+        t3pCommand.clear();
+        if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
+        {
+            logger.errorHandler.printErrorCode(status);
+            respond(connectedSockfd, status);
+        }
+        if (t3pCommand.isNewCommand)
+        {
+            command = TCPCommandTranslator[t3pCommand.command];
+            switch(command)
+            {
+                case HEARTBEAT:
+                    mainDatabase.udpateHeartbeat(entryNumber);
+                    break;
+            }
+        }
+        context = mainDatabase.getEntries()[entryNumber].context;
+    }
+
+    return context;
+}
+
+context_t matchContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired)
+{
+    status_t status;
+    context_t context = MATCH;
+    Logger logger;
+    T3PCommand t3pCommand;
+    tcpcommand_t command;
+    MainDatabaseEntry myEntry;
+    MatchSlot playAs;
+    bool myTurn;
+    int matchEntryNumber;
+    bool sendMessageTurnplay = true;
+    bool sendMessageTurnwait = true;
+
+    myEntry = mainDatabase.getEntry(entryNumber);
+
+    while (!mainDatabase.getEntries()[entryNumber].matchEntryReady)
+    {
+        if (isHeartbeatExpired(heartbeat_expired, entryNumber))
+            return DISCONNECT;
+
+        t3pCommand.clear();
+        if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
+        {
+            logger.errorHandler.printErrorCode(status);
+            respond(connectedSockfd, status);
+        }
+        if (t3pCommand.isNewCommand)
+        {
+            command = TCPCommandTranslator[t3pCommand.command];
+            switch(command)
+            {
+                case HEARTBEAT:
+                    mainDatabase.udpateHeartbeat(entryNumber);
+                    break;
+            }
+        }
+    }
+
+    // Once the match entry is ready, we want to grab the entry number in the match database
+    // and to know if I play as circle or cross.
+    matchEntryNumber = mainDatabase.getEntries()[entryNumber].matchEntryNumber;
+    if (matchDatabase[matchEntryNumber].circlePlayer == myEntry.playerName)
+        playAs = CIRCLE;
+    else    
+        playAs = CROSS;
+
+    while (context == MATCH)
+    {
+        if (matchDatabase[matchEntryNumber].plays == myEntry.playerName)
+        {
+            myTurn = true;
+            if (sendMessageTurnplay)
+            {
+                if (sendTurnMessage(connectedSockfd, matchEntryNumber, myTurn) == STATUS_OK)
+                    sendMessageTurnplay = false;
+                sendMessageTurnwait = true;
+            }
+        }
+        else
+        {
+            myTurn = false;
+            if (sendMessageTurnwait)
+            {
+                if (sendTurnMessage(connectedSockfd, matchEntryNumber, myTurn) == STATUS_OK)
+                    sendMessageTurnwait = false;
+                sendMessageTurnplay = true;
+            }
+        }
+
+        if (isHeartbeatExpired(heartbeat_expired, entryNumber))
+            return DISCONNECT;
+
+        t3pCommand.clear();
+        if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
+        {
+            logger.errorHandler.printErrorCode(status);
+            respond(connectedSockfd, status);
+        }
+        if (t3pCommand.isNewCommand)
+        {
+            command = TCPCommandTranslator[t3pCommand.command];
+            switch(command)
+            {
+                case HEARTBEAT:
+                    mainDatabase.udpateHeartbeat(entryNumber);
+                    break;
+                case GIVEUP:
+                    // Think what to do here
+                    break;
+                case MARKSLOT:
+                    // We first want to know if it's our turn
+                    if (!myTurn)
+                        respond(connectedSockfd, ERROR_NOT_TURN);
+                    else 
+                    {
+                        int slotToMark = stoi(t3pCommand.dataList.front());
+                        // We make this correction because in the RFC,
+                        // the number in the MARKSLOT command is from 1 to 9,
+                        // but in the actual vector is from 0 to 8. 
+                        slotToMark = slotToMark - 1;
+                        if (matchDatabase[matchEntryNumber].isSlotEmpty(slotToMark))
+                            matchDatabase[matchEntryNumber].markSlot(slotToMark, playAs);
+                        else
+                            respond(connectedSockfd, ERROR_BAD_SLOT);
+                    }
+                    break;
+            }
+        }
+        context = mainDatabase.getEntries()[entryNumber].context;
     }
     return context;
 }
@@ -524,6 +677,32 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
                 default:
                     return ERROR_COMMAND_OUT_OF_CONTEXT;
             }
+        case READY_TO_PLAY:
+            switch(command)
+            {
+                case HEARTBEAT:
+                    break;
+                default:
+                    return ERROR_COMMAND_OUT_OF_CONTEXT;
+            }
+            break;
+        case MATCH:
+            switch(command)
+            {
+                case HEARTBEAT:
+                    break;
+                case MARKSLOT:
+                    break;
+                case GIVEUP:
+                    break;
+                case OK:
+                    break;
+                case BAD:
+                    break;
+                default:
+                    return ERROR_COMMAND_OUT_OF_CONTEXT;
+            }
+            break;
     }
     return STATUS_OK;
 }
@@ -531,10 +710,7 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
 status_t respond(int sockfd, status_t response)
 {
     string message = TCPResponseDictionary[response];
-    const char *c_message = message.c_str(); 
-    if (send(sockfd, c_message, strlen(c_message), 0) < 0)
-        return ERROR_SENDING_MESSAGE;
-    return STATUS_OK;
+    return sendMessage(sockfd, message);
 }
 
 status_t sendInviteFrom(int sockfd, string invitingPlayer)
@@ -542,25 +718,18 @@ status_t sendInviteFrom(int sockfd, string invitingPlayer)
     string message = "INVITEFROM|";
     message += invitingPlayer;
     message += " \r\n \r\n";
-    const char *c_message = message.c_str();
-    if (send(sockfd, c_message, strlen(c_message), 0) < 0)
-        return ERROR_SENDING_MESSAGE;
-    return STATUS_OK;
+    return sendMessage(sockfd, message);
 }
 
 status_t sendInvitationTimeout(int sockfd)
 {
     string message = "INVITATIONTIMEOUT \r\n \r\n";
-    const char *c_message = message.c_str();
-    if (send(sockfd, c_message, strlen(c_message), 0) < 0)
-        return ERROR_SENDING_MESSAGE;
-    return STATUS_OK;
+    return sendMessage(sockfd, message);
 }
 
 status_t sendInviteResponse(int sockfd, tcpcommand_t command)
 {
     string message;
-    const char *c_message;
     switch(command)
     {
         case ACCEPT:
@@ -570,6 +739,27 @@ status_t sendInviteResponse(int sockfd, tcpcommand_t command)
             message = "DECLINE \r\n \r\n";
             break;
     }
+    return sendMessage(sockfd, message);
+}
+
+status_t sendTurnMessage(int sockfd, int matchEntryNumber, bool myTurn)
+{
+    string message = "";
+    string circleSlots = matchDatabase[matchEntryNumber].getFormattedSlots(CIRCLE);
+    string crossSlots = matchDatabase[matchEntryNumber].getFormattedSlots(CROSS);
+
+    if (myTurn)
+        message = "TURNPLAY|";
+    else 
+        message = "TURNWAIT|";
+    
+    message += crossSlots + "|" + circleSlots + " \r\n \r\n";
+    return sendMessage(sockfd, message);
+}
+
+status_t sendMessage(int sockfd, string message)
+{
+    const char *c_message;
     c_message = message.c_str();
     if (send(sockfd, c_message, strlen(c_message), 0) < 0)
         return ERROR_SENDING_MESSAGE;
@@ -604,4 +794,15 @@ bool checkPlayerIsAvailable(string name)
             return true;
     } 
     return false;
+}
+
+bool isHeartbeatExpired(bool *heartbeat_expired, int entryNumber)
+{
+    if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
+    {
+        *heartbeat_expired = true;
+        mainDatabase.setContext(entryNumber, DISCONNECT);
+        return true;
+    }
+    return false;    
 }

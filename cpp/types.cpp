@@ -257,6 +257,23 @@ void MainDatabase :: udpateHeartbeat(int entryNumber)
     time(&(this->entries[entryNumber].lastHeartbeat));
 }
 
+MainDatabaseEntry MainDatabase :: getEntry(int entryNumber)
+{
+    return this->entries[entryNumber];
+}
+
+void MainDatabase :: setMatchEntryNumber(int entryNumber, int matchEntryNumber)
+{
+    this->entries[entryNumber].matchEntryNumber = matchEntryNumber;
+    this->entries[entryNumber].matchEntryReady = true;
+}
+
+void MainDatabase :: clearMatchEntryNumber(int entryNumber)
+{
+    this->entries[entryNumber].matchEntryNumber = -1;
+    this->entries[entryNumber].matchEntryReady = false;
+}
+
 /**
  * Methods for T3PCommand
  * */
@@ -273,3 +290,55 @@ void T3PCommand :: clear()
     this->isNewCommand = false;
 }
 
+/**
+ * Methods for MatchEntry
+ * */
+
+MatchEntry :: MatchEntry()
+{
+    int i;
+    this->slots.resize(9);
+    for (i = 0; i < this->slots.size(); i++)
+    {
+        this->slots[i] = EMPTY;
+    }
+}
+
+void MatchEntry :: clearSlots()
+{
+    int i;
+    for (i = 0; i < this->slots.size(); i++)
+    {
+        this->slots[i] = EMPTY;
+    }
+}
+
+void MatchEntry :: markSlot(int slotNumber, MatchSlot slotType)
+{
+    this->slots[slotNumber] = slotType;
+}
+
+vector<MatchSlot> MatchEntry :: getSlots()
+{
+    return this->slots;
+}
+
+string MatchEntry :: getFormattedSlots(MatchSlot slotType)
+{
+    string formattedSlots = "";
+    int i = 1;
+    for (auto const& slot : this->slots)
+    {
+        if (slot == slotType)
+            formattedSlots += to_string(i);
+        i++;
+    }
+    return formattedSlots;
+}
+
+bool MatchEntry :: isSlotEmpty(int slotNumber)
+{
+    if (this->slots[slotNumber] == EMPTY)
+        return true;
+    return false;
+}

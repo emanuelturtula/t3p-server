@@ -13,12 +13,14 @@
 #include "../headers/udp_thread.h"
 #include "../headers/tcp_thread.h"
 #include "../headers/heartbeat_thread.h"
+#include "../headers/referee_thread.h"
 #include "../headers/config.h"
 
 using namespace std;
 
 vector<Slot> slots(MAX_PLAYERS_ONLINE);
 MainDatabase mainDatabase;
+vector<MatchEntry> matchDatabase(MAX_PLAYERS_ONLINE/2); //We can have up to 50 players, so maximum matches are 25.
 
 status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd);
 
@@ -54,6 +56,8 @@ status_t t3p_server(const char *ip)
 
     // Disable for testing other functions
     //thread heartbeat_thread(heartbeatChecker);
+    thread referee_thread(refereeProcess);
+
     while (1)
     {
         logger.debugMessage("Putting TCP socket in listening state...");

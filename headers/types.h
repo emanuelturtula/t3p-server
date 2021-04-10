@@ -49,6 +49,7 @@ enum context_t {
     WAITING_RESPONSE,
     WAITING_OTHER_PLAYER_RESPONSE,
     READY_TO_PLAY,
+    MATCH,
     DISCONNECT
 };
 
@@ -122,6 +123,8 @@ class MainDatabaseEntry {
         time_t lastHeartbeat;
         string readyToPlayWith = "";
         bool heartbeatExpired = false;
+        bool matchEntryReady = false;
+        int matchEntryNumber = -1;
 };
 
 class MainDatabase {
@@ -132,6 +135,7 @@ class MainDatabase {
         int getAvailableEntry();
         int getSlotNumber(int entryNumber);
         context_t getContext(int entryNumber);
+        MainDatabaseEntry getEntry(int entryNumber);
         int getEntryNumber(string playerName);
         int getInvitedPlayerEntryNumber(string playerName);
         vector<MainDatabaseEntry> getEntries();
@@ -143,7 +147,32 @@ class MainDatabase {
         void setContext(int entryNumber, context_t context);
         void setInvitation(int entryNumber, string invitingPlayer);
         void setInvitation(int entryNumber, invitation_status_t invitationStatus);
+        void setMatchEntryNumber(int entryNumber, int matchEntryNumber);
+        void clearMatchEntryNumber(int entryNumber);
         void setHeartbeatExpired(int entryNumber);
         void udpateHeartbeat(int entryNumber);
+};
+
+enum MatchSlot{
+    CIRCLE,
+    CROSS,
+    EMPTY
+};
+
+class MatchEntry {
+    vector<MatchSlot> slots;
+    public:
+        bool free_entry = true;
+        string circlePlayer = "";
+        string crossPlayer = "";
+        string winner = "";
+        string plays;
+        bool matchEnded = false;
+        MatchEntry();
+        void clearSlots();
+        bool isSlotEmpty(int slotNumber);
+        void markSlot(int slotNumber, MatchSlot slotType);
+        vector<MatchSlot> getSlots();
+        string getFormattedSlots(MatchSlot slotType);
 };
 
