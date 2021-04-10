@@ -113,16 +113,21 @@ status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd)
     if (sockfd == NULL)
         return ERROR_NULL_POINTER;
 
-    server.sin_addr.s_addr = inet_addr(ip);
+    
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
 
     // Create the socket
     if (is_udp)
+    {
+        server.sin_addr.s_addr = INADDR_ANY;
         sock_type = SOCK_DGRAM;
+    }
     else
+    {
+        server.sin_addr.s_addr = inet_addr(ip);
         sock_type = SOCK_STREAM;
-
+    }
     if ((*sockfd = socket(AF_INET, sock_type, 0)) < 0) 
         return ERROR_SOCKET_CREATION;
 
