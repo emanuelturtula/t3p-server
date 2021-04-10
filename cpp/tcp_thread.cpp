@@ -109,17 +109,21 @@ void processClient(int connectedSockfd, int slotNumber)
     time_t timeout;
     int entryNumber;
 
-    // Set the socket reception timeout to 1 second
+    // Set the socket reception timeout to LOGIN_SECONDS_TIMEOUT to wait for a login
     struct timeval tv;
-    tv.tv_sec = 1;
+    tv.tv_sec = LOGIN_SECONDS_TIMEOUT;
     tv.tv_usec = 0;
-    
+    setsockopt(connectedSockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+
     // Receive first message and save it formatted in a t3pcommand object. Also we check if the command is correct,
     // that is, if it is a known command and if its arguments are valid.
     if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
         logger.errorHandler.printErrorCode(status);
     if (t3pCommand.isNewCommand)
     {
+        // Change the reception timeout to 1 second
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
         setsockopt(connectedSockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
         // If we could make it to here, it means the command was a login, the name was ok and the name was not taken. 
         // So we finally add the player to the database and change the context to lobby.
@@ -180,6 +184,7 @@ void processClient(int connectedSockfd, int slotNumber)
         
             
     // Close the socket
+    shutdown(connectedSockfd, SHUT_RDWR);
     close(connectedSockfd);
     // Previous ending the thread, we must free the slot.
     slots[slotNumber].clear();
