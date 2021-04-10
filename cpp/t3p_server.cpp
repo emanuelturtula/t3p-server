@@ -55,7 +55,7 @@ status_t t3p_server(const char *ip)
     thread udp_thread(processUDPMesages, udpSocket, ip); 
 
     // Disable for testing other functions
-    //thread heartbeat_thread(heartbeatChecker);
+    thread heartbeat_thread(heartbeatChecker);
     thread referee_thread(refereeProcess);
 
     while (1)
