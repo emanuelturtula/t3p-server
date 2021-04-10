@@ -1,4 +1,7 @@
 //#define DEBUG_MESSAGES
+//#define DEBUG_TEST
+
+#define SERVER_IP "127.0.0.1"
 
 #define UDP_PORT_NUMBER 2001
 #define UDP_BUFFER_SIZE 1024
