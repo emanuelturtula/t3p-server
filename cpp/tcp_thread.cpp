@@ -24,7 +24,9 @@ list<string> TCPCommands = {
     "DECLINE",
     "RANDOMINVITE",
     "MARKSLOT",
-    "GIVEUP"
+    "GIVEUP",
+    "200",
+    "400"
 };
 
 enum tcpcommand_t {
@@ -130,6 +132,7 @@ void processClient(int connectedSockfd, int slotNumber)
         time(&(playerEntry.lastHeartbeat));
         mainDatabase.setEntry(entryNumber, playerEntry);
         respond(connectedSockfd, RESPONSE_OK);
+        logger.printMessage("Client process: " + playerEntry.playerName + " connected.");
     }
 
     bool heartbeat_expired = false; 
@@ -139,29 +142,42 @@ void processClient(int connectedSockfd, int slotNumber)
         switch(context)
         {
             case LOBBY:
+                logger.printMessage("Client process: " + playerEntry.playerName + " is in Lobby.");
                 context = lobbyContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
             case WAITING_RESPONSE:
+                logger.printMessage("Client process: " + playerEntry.playerName + " is waiting for client to respond.");
                 context = waitingResponseContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
             case WAITING_OTHER_PLAYER_RESPONSE:
+                logger.printMessage("Client process: " + playerEntry.playerName + " is waiting for another player to respond.");
                 context = waitingOtherPlayerResponseContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
             case READY_TO_PLAY:
+                logger.printMessage("Client process: " + playerEntry.playerName + " is ready to play.");
                 context = readyToPlayContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
             case MATCH:
+                logger.printMessage("Client process: " + playerEntry.playerName + " is in a match.");
                 context = matchContext(connectedSockfd, entryNumber, &heartbeat_expired);
                 break;
         }
     }
 
     if (context == SOCKET_CONNECTED)
-    // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
-    // from the database. We have to tell the client that the login was incorrect
+    {
+        // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
+        // from the database. We have to tell the client that the login was incorrect
+        logger.printMessage("TCP - Thread: This client did not login correctly.");
+        logger.errorHandler.printErrorCode(status);
         respond(connectedSockfd, status);
+    }
     else 
+    {
+        logger.printMessage("Client process: " + playerEntry.playerName + " logged out.");
         mainDatabase.clearEntry(entryNumber);
+    }
+        
             
     // Close the socket
     close(connectedSockfd);
@@ -179,39 +195,33 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
     T3PCommand t3pCommand;
     tcpcommand_t command;
     MainDatabaseEntry myEntry;
+    list<string> availablePlayers;
     mainDatabase.setContext(entryNumber, context);
     myEntry = mainDatabase.getEntries()[entryNumber];
     string invitePlayer;
 
-    while ((context == LOBBY))
+    while (context == LOBBY)
     {
-        // Check if heartbeat is expired
         if (isHeartbeatExpired(heartbeat_expired, entryNumber))
             return DISCONNECT;
 
-        // Check if we have invitation pending
         if (mainDatabase.getEntries()[entryNumber].invitationStatus == PENDING)
         {
             context = WAITING_RESPONSE;
             break;
         }
-        // Receive a message (wait only one second)
         if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
             respond(connectedSockfd, status);
         if (t3pCommand.isNewCommand)
         {
-            // Translate the command string to a command enum
             command = TCPCommandTranslator[t3pCommand.command];
             switch(command)
             {
                 case HEARTBEAT:
-                    // If it is a heartbeat, update the entry
                     mainDatabase.udpateHeartbeat(entryNumber);
                     break;
                 case INVITE:
-                    // If it is an invite, we already checked the format and that the player is available.
-                    invitePlayer = t3pCommand.dataList.front();
-                    // Check that the username is not myself    
+                    invitePlayer = t3pCommand.dataList.front();  
                     if (myEntry.playerName == invitePlayer)
                         respond(connectedSockfd, ERROR_INCORRECT_NAME);
                     else 
@@ -223,20 +233,24 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
                     }
                     break;
                 case RANDOMINVITE:
-                    // Random invite is similar to invite, with the only difference we choose a random player. 
-                    // We need to review this because it is not random at all, but we don't wanna waste time
-                    // here.
-                    list<string> availablePlayers = mainDatabase.getAvailablePlayers(myEntry.playerName);
+                    availablePlayers = mainDatabase.getAvailablePlayers(myEntry.playerName);
                     if (availablePlayers.empty())
                         respond(connectedSockfd, INFO_NO_PLAYERS_AVAILABLE);
                     else 
                     {
+                        int random_number = rand() % availablePlayers.size();
+                        for (int i=0; i < random_number; i++)
+                            availablePlayers.pop_front();
                         invitePlayer = availablePlayers.front();
                         mainDatabase.setInvitation(mainDatabase.getEntryNumber(invitePlayer), myEntry.playerName);
                         respond(connectedSockfd, RESPONSE_OK);
                         mainDatabase.setContext(entryNumber, context);
                         context = WAITING_OTHER_PLAYER_RESPONSE;
                     }
+                    break;
+                case LOGOUT:
+                    context = DISCONNECT;
+                    mainDatabase.setContext(entryNumber, context);
                     break;
             }
         }
@@ -539,6 +553,10 @@ context_t matchContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
                             respond(connectedSockfd, ERROR_BAD_SLOT);
                     }
                     break;
+                case OK:
+                    break;
+                case BAD:
+                    break;
             }
         }
         context = mainDatabase.getEntries()[entryNumber].context;
@@ -834,8 +852,10 @@ bool checkPlayerIsAvailable(string name)
 
 bool isHeartbeatExpired(bool *heartbeat_expired, int entryNumber)
 {
+    Logger logger;
     if (mainDatabase.getEntries()[entryNumber].heartbeatExpired)
     {
+        logger.printMessage("Client process: " + mainDatabase.getEntries()[entryNumber].playerName + " has heartbeat expired.");
         *heartbeat_expired = true;
         mainDatabase.setContext(entryNumber, DISCONNECT);
         return true;
