@@ -14,6 +14,7 @@ extern MainDatabase mainDatabase;
  * */
 void refereeProcess()
 {
+    Logger logger;
     MainDatabaseEntry firstPlayerEntry, secondPlayerEntry;
     bool match_found;
     while(1)
@@ -36,6 +37,7 @@ void refereeProcess()
                         if (firstPlayerEntry.readyToPlayWith == secondPlayerEntry.playerName)
                         {
                             // These two have to be in a match. We then put them both in a match context
+                            logger.printMessage("Referee: " + firstPlayerEntry.playerName + " will be in a match with " + secondPlayerEntry.playerName);
                             mainDatabase.setContext(firstPlayerEntryNumber, MATCH);
                             mainDatabase.setContext(secondPlayerEntryNumber, MATCH);
                             // We create a thread for them
