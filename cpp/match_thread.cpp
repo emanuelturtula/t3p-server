@@ -14,6 +14,7 @@ void matchProcess(int firstPlayerEntryNumber, int secondPlayerEntryNumber)
     int matchEntryNumber;
     bool draw = false;
     MatchSlot slotTypeWinner;
+    Logger logger;
     // Here we prepare the match entry and write the players' database entries 
     // so they can see which match entry correspond to them.
     // When we have two players logged in, they won't switch their places in the database,
@@ -74,6 +75,13 @@ void matchProcess(int firstPlayerEntryNumber, int secondPlayerEntryNumber)
             matchDatabase[matchEntryNumber].matchEnded = true;
             break;
         }     
+
+        #ifdef DEBUG_MESSAGES
+            if (matchDatabase[matchEntryNumber].plays == matchDatabase[matchEntryNumber].circlePlayer)
+                logger.debugMessage("Player " + matchDatabase[matchEntryNumber].circlePlayer + " has " + to_string(MARKSLOT_SECONDS_TIMEOUT - (time(NULL) - lastSlotChangeTime)) + " seconds to play.");
+            else
+                logger.debugMessage("Player " + matchDatabase[matchEntryNumber].crossPlayer + " has " + to_string(MARKSLOT_SECONDS_TIMEOUT - (time(NULL) - lastSlotChangeTime)) + " seconds to play.");
+        #endif
 
         if (time(NULL) - lastSlotChangeTime > MARKSLOT_SECONDS_TIMEOUT)
         {
@@ -153,24 +161,34 @@ MatchSlot checkBoard(vector<MatchSlot> boardSlots, bool *draw)
     // Horizontals are 0,1,2; 3,4,5; 6,7,8
     for (i=0; i < 7; i+=3)
     {
-        if (((boardSlots[i] == boardSlots[i+1]) == boardSlots[i+2]) && (boardSlots[i] != EMPTY))
-            return boardSlots[i];
+        if ((boardSlots[i] == boardSlots[i+1]) && 
+            (boardSlots[i] == boardSlots[i+2]) &&
+            (boardSlots[i] != EMPTY))
+            return boardSlots[i];            
     }
 
     // Check verticals
     // Verticals are 0,3,6; 1,4,7; 2,5,8
     for (i=0; i<3; i+=1)
     {
-        if (((boardSlots[i] == boardSlots[i+3]) == boardSlots[i+6]) && (boardSlots[i] != EMPTY))
+        if ((boardSlots[i] == boardSlots[i+3]) &&
+            (boardSlots[i] == boardSlots[i+6]) && 
+            (boardSlots[i] != EMPTY))
             return boardSlots[i];
     }
 
     // Check diagonals
     // Diagonals are 0,4,8; 2,4,6
-    if (((boardSlots[0] == boardSlots[4]) == boardSlots[8]) && (boardSlots[4] != EMPTY))
+    if ((boardSlots[0] == boardSlots[4]) &&
+        (boardSlots[0] == boardSlots[8]) &&
+        (boardSlots[4] != EMPTY))
         return boardSlots[4];
-    if (((boardSlots[2] == boardSlots[4]) == boardSlots[6]) && (boardSlots[4] != EMPTY))
+    
+    if ((boardSlots[2] == boardSlots[4]) &&
+        (boardSlots[2] == boardSlots[6]) &&
+        (boardSlots[4] != EMPTY))
         return boardSlots[4];
+
 
     // If we got here, is because we couldn't find any winner. 
     // Let's check if the board is full to see if it's a draw.
