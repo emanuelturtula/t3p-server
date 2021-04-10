@@ -37,6 +37,8 @@ void processUDPMesages(int udpSocket, const char *ip)
     T3PCommand t3pCommand;
     string message;
 
+    int broadcastEnable = 1;
+    setsockopt(udpSocket, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
 
     while(1)
     {
