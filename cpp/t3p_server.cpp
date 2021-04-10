@@ -57,7 +57,7 @@ status_t t3p_server(const char *ip)
     // Disable for testing other functions
     thread heartbeat_thread(heartbeatChecker);
     thread referee_thread(refereeProcess);
-
+    logger.printMessage("Server is listening IP: " + string(ip));
     while (1)
     {
         logger.debugMessage("Putting TCP socket in listening state...");

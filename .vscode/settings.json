@@ -6,6 +6,7 @@
         "vector": "cpp",
         "system_error": "cpp",
         "iostream": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "random": "cpp"
     }
 }
