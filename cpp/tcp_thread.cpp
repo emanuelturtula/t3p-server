@@ -763,10 +763,10 @@ status_t sendInviteResponse(int sockfd, tcpcommand_t command)
     switch(command)
     {
         case ACCEPT:
-            message = "ACCEPT \r\n \r\n";
+            message = "INVITERESPONSE|ACCEPT \r\n \r\n";
             break;
         case DECLINE:
-            message = "DECLINE \r\n \r\n";
+            message = "INVITERESPONSE|DECLINE \r\n \r\n";
             break;
     }
     return sendMessage(sockfd, message);
