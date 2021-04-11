@@ -256,6 +256,7 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
                 case LOGOUT:
                     context = DISCONNECT;
                     mainDatabase.setContext(entryNumber, context);
+                    respond(connectedSockfd, RESPONSE_OK);
                     break;
             }
         }
