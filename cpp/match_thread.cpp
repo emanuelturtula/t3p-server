@@ -116,7 +116,7 @@ void matchProcess(int firstPlayerEntryNumber, int secondPlayerEntryNumber)
             else
             {
                 if (draw)
-                    bool matchEnded = true;
+                    matchDatabase[matchEntryNumber].matchEnded = true;
             }
             //  Then update the turn if the game is still being played.
             if (!matchDatabase[matchEntryNumber].matchEnded)
