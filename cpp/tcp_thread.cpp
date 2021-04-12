@@ -551,10 +551,13 @@ context_t matchContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
                         int slotToMark = stoi(t3pCommand.dataList.front());
                         // We make this correction because in the RFC,
                         // the number in the MARKSLOT command is from 1 to 9,
-                        // but in the actual vector is from 0 to 8. 
-                        slotToMark = slotToMark - 1;
-                        if (matchDatabase[matchEntryNumber].isSlotEmpty(slotToMark))
-                            matchDatabase[matchEntryNumber].markSlot(slotToMark, playAs);
+                        // but in the actual vector is from 0 to 8.                         
+                        if ((matchDatabase[matchEntryNumber].isSlotEmpty(slotToMark-1)) &&
+                            (slotToMark > 0) && (slotToMark < 10))
+                        {
+                            respond(connectedSockfd, RESPONSE_OK);
+                            matchDatabase[matchEntryNumber].markSlot(slotToMark-1, playAs);
+                        }  
                         else
                             respond(connectedSockfd, ERROR_BAD_SLOT);
                     }
