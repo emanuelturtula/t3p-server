@@ -82,6 +82,7 @@ context_t readyToPlayContext(int connectedSockfd, int entryNumber, bool *heartbe
 context_t matchContext(int connectedSockfd, int entryNumber, bool *heartbeat_expired);
 
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context);
+status_t peek_tcp_buffer(int sockfd, int *read_bytes, string *socket_message);
 status_t parseMessage(string message, T3PCommand *t3pCommand);
 status_t checkCommand(T3PCommand t3pCommand, context_t context);
 status_t respond(int sockfd, status_t response);
@@ -224,6 +225,7 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
             {
                 case HEARTBEAT:
                     mainDatabase.udpateHeartbeat(entryNumber);
+                    logger.printMessage("Client process: " + myEntry.playerName + " updated heartbeat");
                     break;
                 case INVITE:
                     invitePlayer = t3pCommand.dataList.front();  
@@ -588,18 +590,37 @@ context_t matchContext(int connectedSockfd, int entryNumber, bool *heartbeat_exp
 status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context)
 {
     status_t status;
-    (*t3pCommand).clear();
+    int read_bytes;
+    int strip_bytes;
+    int pos;
+    string socket_message;
     char message[TCP_BUFFER_SIZE] = {0};
-    int bytes = recv(sockfd, message, sizeof(message), 0);
-    if (bytes > 0)
+    (*t3pCommand).clear();
+    
+    if ((status = peek_tcp_buffer(sockfd, &read_bytes, &socket_message)) != STATUS_OK)
+        return status;
+
+    if (read_bytes > 0)
     {
+        if ((pos = socket_message.find(" \r\n \r\n")) != string :: npos)
+            strip_bytes = pos + strlen(" \r\n \r\n");
+            
+        recv(sockfd, message, strip_bytes, 0);
         if (parseMessage(string(message), t3pCommand) != STATUS_OK)
             return ERROR_BAD_REQUEST;
         if ((status = checkCommand(*t3pCommand, context)) != STATUS_OK)
             return status;
         t3pCommand->isNewCommand = true;
     }
-    return STATUS_OK;    
+    return STATUS_OK;
+}
+
+status_t peek_tcp_buffer(int sockfd, int *read_bytes, string *socket_message)
+{
+    char message[TCP_BUFFER_SIZE] = {0};
+    *read_bytes = recv(sockfd, message, sizeof(message), MSG_PEEK);
+    *socket_message = message;
+    return STATUS_OK;
 }
 
 status_t parseMessage(string message, T3PCommand *t3pCommand)
