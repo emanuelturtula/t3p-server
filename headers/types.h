@@ -181,7 +181,6 @@ class MatchEntry {
         bool crossPlayerEndConfirmation = false;
         bool circlePlayerLostConnection = false;
         bool crossPlayerLostConnection = false;
-
         MatchEntry();
         void clearEntry();
         void clearSlots();
@@ -191,3 +190,4 @@ class MatchEntry {
         string getFormattedSlots(MatchSlot slotType);
 };
 
+int getAvailableMatchEntry();

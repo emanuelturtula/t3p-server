@@ -38,14 +38,8 @@ void matchProcess(int firstPlayerEntryNumber, int secondPlayerEntryNumber)
     // Now we have to find a free slot in the matchDatabase. It won't ever happen that we don't find an
     // available slot, because that would mean that every player is in a match, so new invitations
     // can't exist.
-    for (matchEntryNumber = 0; matchEntryNumber < matchDatabase.size(); matchEntryNumber++)
-    {
-        if (matchDatabase[matchEntryNumber].free_entry)
-            // As soon as we find a free slot, we reserve that space.
-            matchDatabase[matchEntryNumber].free_entry = false;
-            break;
-    }
-
+    matchEntryNumber = getAvailableMatchEntry();
+    
     // We copy the players information in our slot. 
     matchDatabase[matchEntryNumber].circlePlayer = matchEntry.circlePlayer;
     matchDatabase[matchEntryNumber].crossPlayer = matchEntry.crossPlayer;
