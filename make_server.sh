@@ -1,0 +1,1 @@
+c++ -g cpp/*.cpp -o server.out -pthread
