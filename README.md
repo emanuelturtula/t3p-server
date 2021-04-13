@@ -1,2 +1,40 @@
-# -t3p-server
-T3P server Repository for Laboratorio de Redes de Computadoras - FIUBA
+# TicTacToe Server
+
+In this repository, you will find the T3P Server. This was a project requested in the course Laboratorio de Redes de Computadoras, from FIUBA. This server is based in RFC-TicTacToe (see useful links section for more details).
+
+## How to compile and run
+
+This server needs a linux kernel based OS in order to be compiled and executed. Before compiling, take a look at **config.h**, located in folder **headers**. Here you will find some
+configurations to be made, such as the server IP and the TCP and UDP ports that runs on.
+
+In the root folder, you will find a bash script: **make_server.sh**. This script will compile all the files and output an executable file called **server.out** in the same folder.
+
+After running the script, type ./server.out to start the server.
+
+## Useful links
+
+<a href="https://docs.google.com/document/d/1eurJnPB9OFcRuYwLIdP7G9ug2nZrvtSjIa1J8TGMKkw/edit" target="_top">RFC-TicTacToe</a>
+
+<a href="https://github.com/emanuelturtula/t3p-server" target="_top">TicTacToe Client</a>
+
+## Tests with netcat
+
+Some tests were made with the application netcat to check if the server was responding correctly according to the RFC.
+
+### UDP Messages
+
+The server listens by default UDP port 2001 for Discover type messages.
+
+![image](https://user-images.githubusercontent.com/38018503/114593550-970ef500-9c62-11eb-8240-8cfbf788ae43.png)
+
+### TCP Messages
+
+TODO
+
+## Authors
+
+Emanuel Turtula
+
+Gonzalo Rizzo
+
+Gerónimo Ferrari

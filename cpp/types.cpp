@@ -6,7 +6,7 @@
 
 using namespace std;
 
-mutex m_stdout, m_stderr, m_database;
+mutex m_stdout, m_stderr, m_database, m_match;
 
 /**
  * Methods for Logger
@@ -357,4 +357,21 @@ bool MatchEntry :: isSlotEmpty(int slotNumber)
     if (this->slots[slotNumber] == EMPTY)
         return true;
     return false;
+}
+
+int getAvailableMatchEntry()
+{
+    extern vector<MatchEntry> matchDatabase;
+    int matchEntryNumber;
+    lock_guard<mutex> lock(m_match);
+    for (matchEntryNumber = 0; matchEntryNumber < matchDatabase.size(); matchEntryNumber++)
+    {
+        if (matchDatabase[matchEntryNumber].free_entry)
+        {
+            // As soon as we find a free slot, we reserve that space.
+            matchDatabase[matchEntryNumber].free_entry = false;
+            break;
+        }
+    }
+    return matchEntryNumber;
 }
