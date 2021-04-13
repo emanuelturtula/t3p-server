@@ -25,6 +25,12 @@ Some tests were made with the application netcat to check if the server was resp
 
 The server listens by default UDP port 2001 for Discover type messages.
 
+![image](https://user-images.githubusercontent.com/38018503/114593550-970ef500-9c62-11eb-8240-8cfbf788ae43.png)
+
+### TCP Messages
+
+TODO
+
 ## Authors
 
 Emanuel Turtula
