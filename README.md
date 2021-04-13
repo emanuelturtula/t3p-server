@@ -14,10 +14,13 @@ After running the script, type ./server.out to start the server.
 ## Useful links
 
 <a href="https://docs.google.com/document/d/1eurJnPB9OFcRuYwLIdP7G9ug2nZrvtSjIa1J8TGMKkw/edit" target="_top">RFC-TicTacToe</a>
+
 <a href="https://github.com/emanuelturtula/t3p-server" target="_top">TicTacToe Client</a>
 
 ## Authors
 
 Emanuel Turtula
+
 Gonzalo Rizzo
+
 Gerónimo Ferrari
