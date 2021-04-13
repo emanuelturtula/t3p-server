@@ -1,6 +1,6 @@
 # TicTacToe Server
 
-In this repository, you will find the T3P Server. This was a project requested in the course Laboratorio de Redes de Computadoras, from FIUBA.
+In this repository, you will find the T3P Server. This was a project requested in the course Laboratorio de Redes de Computadoras, from FIUBA. This server is based in RFC-TicTacToe (see useful links section for more details).
 
 ## How to compile and run
 
@@ -16,6 +16,14 @@ After running the script, type ./server.out to start the server.
 <a href="https://docs.google.com/document/d/1eurJnPB9OFcRuYwLIdP7G9ug2nZrvtSjIa1J8TGMKkw/edit" target="_top">RFC-TicTacToe</a>
 
 <a href="https://github.com/emanuelturtula/t3p-server" target="_top">TicTacToe Client</a>
+
+## Tests with netcat
+
+Some tests were made with the application netcat to check if the server was responding correctly according to the RFC.
+
+### UDP Messages
+
+The server listens by default UDP port 2001 for Discover type messages.
 
 ## Authors
 
