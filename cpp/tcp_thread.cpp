@@ -115,8 +115,7 @@ void processClient(int connectedSockfd, int slotNumber)
  
     // Receive first message and save it formatted in a t3pcommand object. Also we check if the command is correct,
     // that is, if it is a known command and if its arguments are valid.
-    if ((status = receiveMessage(connectedSockfd, &t3pCommand, context)) != STATUS_OK)
-        logger.errorHandler.printErrorCode(status);
+    status = receiveMessage(connectedSockfd, &t3pCommand, context);
     if (t3pCommand.isNewCommand)
     {
         setsockopt(connectedSockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
@@ -176,8 +175,7 @@ void processClient(int connectedSockfd, int slotNumber)
         case SOCKET_CONNECTED:
             // If we got here after a wrong login, there won't be any entry, so we don't have to delete anything 
             // from the database. We have to tell the client that the login was incorrect
-            logger.printMessage("Client process: This client did not login correctly.");
-            logger.errorHandler.printErrorCode(status);
+            logger.printErrorMessage(status);
             respond(connectedSockfd, status);
             break;
         case DISCONNECT:
@@ -188,8 +186,7 @@ void processClient(int connectedSockfd, int slotNumber)
             logger.printMessage("Client process: " + playerEntry.playerName + " logged out due to heartbeat expiration");
             break;
         case DISCONNECT_ERROR:
-            logger.printMessage("Client process: " + playerEntry.playerName + " logged out with error code:");
-            logger.errorHandler.printErrorCode(status);
+            logger.printErrorMessage(status);
             break;
     }
                 

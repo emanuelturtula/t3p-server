@@ -105,6 +105,7 @@ class Logger {
         Printer printer;
 };
 
+
 class T3PResponse {
     public:
         T3PResponse();
