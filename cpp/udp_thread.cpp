@@ -10,11 +10,11 @@
 #include <list>
 #include <regex>
 #include "../headers/udp_thread.h"
-#include "../headers/config.h"
 
 using namespace std;
 
 extern MainDatabase mainDatabase;
+extern map<string, string> config;
 
 status_t receiveMessage(int sockfd, struct sockaddr_in *client, socklen_t *clientlen, T3PCommand *t3pCommand);
 status_t parseUDPMessage(string message, T3PCommand *t3pCommand);
@@ -157,7 +157,7 @@ status_t checkCommand(T3PCommand t3pCommand)
     {
         if (!regex_match(t3pCommand.dataList.front(), ip_checker))
             return ERROR_BAD_REQUEST;
-        if (t3pCommand.dataList.front() != SERVER_IP)
+        if (t3pCommand.dataList.front() != config["SERVER_IP"])
             return ERROR_BAD_REQUEST;
     }
     return STATUS_OK;

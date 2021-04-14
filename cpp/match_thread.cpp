@@ -1,10 +1,12 @@
 #include "../headers/match_thread.h"
 #include "../headers/tcp_thread.h"
 #include "../headers/types.h"
+#include <map>
 #include <ctime>
 
 extern MainDatabase mainDatabase;
 extern vector<MatchEntry> matchDatabase;
+extern map<string, int> config;
 
 MatchSlot checkBoard(vector<MatchSlot> boardSlots, bool *draw);
 
@@ -15,6 +17,7 @@ void matchProcess(int firstPlayerEntryNumber, int secondPlayerEntryNumber)
     bool draw = false;
     MatchSlot slotTypeWinner;
     Logger logger;
+    int markslotTimeout = config["MARKSLOT_TIMEOUT"];
     // Here we prepare the match entry and write the players' database entries 
     // so they can see which match entry correspond to them.
     // When we have two players logged in, they won't switch their places in the database,
@@ -77,7 +80,7 @@ void matchProcess(int firstPlayerEntryNumber, int secondPlayerEntryNumber)
                 logger.debugMessage("Player " + matchDatabase[matchEntryNumber].crossPlayer + " has " + to_string(MARKSLOT_SECONDS_TIMEOUT - (time(NULL) - lastSlotChangeTime)) + " seconds to play.");
         #endif
 
-        if (time(NULL) - lastSlotChangeTime > MARKSLOT_SECONDS_TIMEOUT)
+        if (time(NULL) - lastSlotChangeTime > markslotTimeout)
         {
             // If a player doesn't interact in a while, we make him lose 
             // because of timeout

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <mutex>
+#include <map>
 #include "../headers/types.h"
-#include "../headers/config.h"
 
 
 using namespace std;
@@ -18,20 +18,26 @@ Logger :: Logger()
 
 }
 
-void Logger :: printMessage(status_t status)
+void Logger :: printErrorMessage(status_t status)
 {
     this->printer.writeStderr("Got status ID = " + to_string(status));
 }
 
-void Logger :: printMessage(string message)
+void Logger :: printErrorMessage(string message, status_t status)
 {
+    this->printErrorMessage(status);
     this->printer.writeStderr(message);
 }
 
-void Logger :: printMessage(string message, status_t status)
+void Logger :: printMessage(string message)
 {
-    this->printMessage(status);
-    this->printMessage(message);
+    this->printer.writeStdout(message);
+}
+
+void Logger :: printMessage(string message, string color)
+{
+    string msg = color + message + RESET;
+    this->printer.writeStdout(msg);
 }
 
 void Logger :: debugMessage(string message)
@@ -105,7 +111,12 @@ MainDatabaseEntry :: MainDatabaseEntry()
  * */
 MainDatabase :: MainDatabase()
 {
-    this->entries.resize(MAX_PLAYERS_ONLINE);
+
+}
+
+void MainDatabase :: resizeEntries(int size)
+{
+    this->entries.resize(size);
 }
 
 void MainDatabase :: clearEntry(int entryNumber)

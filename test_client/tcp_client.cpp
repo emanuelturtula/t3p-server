@@ -18,15 +18,18 @@ mutex m;
 
 void readerThread(int connectedSockfd);
 void writeOut(const char *message);
+void writeError(const char *message);
+bool connected = false;
 
-int main()
+
+int main(int argc, char *argv[])
 {
     int sockfd;
     int bytes;
     string message;
     const char *c_message;
     struct sockaddr_in server = {0};
-    const char *ip = "127.0.0.1";
+    const char *ip = argv[1];
 
     server.sin_family = AF_INET;
     server.sin_port = htons(2000);
@@ -36,22 +39,36 @@ int main()
         return EXIT_FAILURE;
     
     thread reader(readerThread, sockfd);
+    reader.detach();
     int error_code = 0;
     socklen_t error_code_size = sizeof(error_code);
+    connected = true;
     getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-    while (error_code == 0)
+    while ((error_code == 0) && connected)
     {
         message = "";
         writeOut("Type a message:");
         getline(cin, message);
         message += " \r\n \r\n";
         c_message = message.c_str();
-        send(sockfd, c_message, strlen(c_message), 0);
+        bytes = send(sockfd, c_message, strlen(c_message), 0);
+        if (bytes < 0)
+        {
+            cerr << "Error sending message" << endl;
+            return EXIT_FAILURE;
+        }
+        if (message == "LOGOUT \r\n \r\n")
+        {
+            cout << "LOGOUT" << endl;   
+            break;
+        }
         message = "Sending: " + message;
         writeOut(message.c_str());
-        sleep(1);
+        
         getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
     }
+    close(sockfd);
+    connected = false;
     return EXIT_SUCCESS;
 }
 
@@ -62,18 +79,30 @@ void readerThread(int connectedSockfd)
     char buffer[1024];
     socklen_t error_code_size = sizeof(error_code);
     getsockopt(connectedSockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-    while(error_code == 0)
+    while((error_code == 0) && connected)
     {
         memset(&buffer, 0, sizeof(buffer));
         bytes = recv(connectedSockfd, &buffer, sizeof(buffer), 0);
+        if (bytes < 0)
+        {
+            writeError("Error receiving message");
+            break;
+        }
         if (bytes > 0)
             writeOut(buffer);
         getsockopt(connectedSockfd, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
     }
+    connected = false;
 }
 
 void writeOut(const char *message)
 {
     lock_guard<mutex> lock(m);
     cout << message << endl;
+}
+
+void writeError(const char *message)
+{
+    lock_guard<mutex> lock(m);
+    cerr << message << endl;
 }

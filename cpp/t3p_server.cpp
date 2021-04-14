@@ -8,19 +8,22 @@
 #include <unistd.h>
 #include <thread>
 #include <vector>
+#include <map>
+#include <iostream>
 #include "../headers/t3p_server.h"
 #include "../headers/types.h" 
 #include "../headers/udp_thread.h"
 #include "../headers/tcp_thread.h"
 #include "../headers/heartbeat_thread.h"
 #include "../headers/referee_thread.h"
-#include "../headers/config.h"
 
 using namespace std;
 
-vector<Slot> slots(MAX_PLAYERS_ONLINE);
+extern map<string, int> config;
+
+vector<Slot> slots;
 MainDatabase mainDatabase;
-vector<MatchEntry> matchDatabase(MAX_PLAYERS_ONLINE/2); //We can have up to 50 players, so maximum matches are 25.
+vector<MatchEntry> matchDatabase; //We can have up to 50 players, so maximum matches are 25.
 
 status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd);
 
@@ -31,10 +34,18 @@ status_t t3p_server(const char *ip)
     int tcpSocket;
     int connectedSocket;
     Logger logger;
+    char buffer[TCP_BUFFER_SIZE];    
+    int maxPlayers = config["MAX_PLAYERS_ONLINE"];
+    int udpPort = config["UDP_PORT"];
+    int tcpPort = config["TCP_PORT"];
+    int tcpMaxPendingConnections = config["TCP_MAX_PENDING_CONNECTIONS"];
 
+    slots.resize(maxPlayers);
+    mainDatabase.resizeEntries(maxPlayers);
+    matchDatabase.resize(maxPlayers/2);
     // Get the bound UDP socket.
     logger.debugMessage("Getting bound UDP socket...");
-    if ((status = get_bound_socket(ip, UDP_PORT_NUMBER, true, &udpSocket)) != STATUS_OK)
+    if ((status = get_bound_socket(ip, udpPort, true, &udpSocket)) != STATUS_OK)
     {
         logger.errorHandler.printErrorCode(status);
         return status;
@@ -43,7 +54,7 @@ status_t t3p_server(const char *ip)
 
     // Get the bound TCP socket. 
     logger.debugMessage("Getting listening TCP socket...");
-    if ((status = get_bound_socket(ip, TCP_PORT_NUMBER, false, &tcpSocket)) != STATUS_OK)
+    if ((status = get_bound_socket(ip, tcpPort, false, &tcpSocket)) != STATUS_OK)
     {
         logger.errorHandler.printErrorCode(status);
         return status;
@@ -57,22 +68,21 @@ status_t t3p_server(const char *ip)
     // Disable for testing other functions
     thread heartbeat_thread(heartbeatChecker);
     thread referee_thread(refereeProcess);
-    logger.printMessage("Server is listening IP: " + string(ip));
+    logger.printMessage("Server is listening IP: " + string(ip), BOLDGREEN);
     while (1)
     {
         logger.debugMessage("Putting TCP socket in listening state...");
-        if (listen(tcpSocket, TCP_MAX_PENDING_CONNECTIONS) != 0)
+        if (listen(tcpSocket, tcpMaxPendingConnections) != 0)
         {
             close(tcpSocket);
             logger.debugMessage("TCP - Error listening");
-            // error handling
             return ERROR_SOCKET_LISTENING;
         }
         logger.debugMessage("OK.");
         logger.debugMessage("Waiting for a client to connect...");
         if ((connectedSocket = accept(tcpSocket, NULL, NULL)) < 0)
         {
-            // error handling
+            cerr << "Error accepting client" << endl;
         }
         else 
         {
@@ -94,9 +104,9 @@ status_t t3p_server(const char *ip)
             }
             if (isServerFull)
             {
-                //TODO
-                //Check if client's message is correct (a login). If not,
-                //return corresponding error message, else, return server full message.
+                logger.printMessage("T3P Server: a client is trying to connect but server is full");
+                send(connectedSocket, "500|Server Error \r\n \r\n", strlen("500|Server Error \r\n \r\n"), 0);
+                close(connectedSocket);
             }
         }
     }
@@ -109,10 +119,6 @@ status_t get_bound_socket(const char *ip, int port, bool is_udp, int *sockfd)
     int sock_type;
     int optval = 1;
     struct sockaddr_in server = {0};
-
-    if (sockfd == NULL)
-        return ERROR_NULL_POINTER;
-
     
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
