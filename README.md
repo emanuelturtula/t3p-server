@@ -17,19 +17,41 @@ After running the script, type ./server.out to start the server.
 
 <a href="https://github.com/emanuelturtula/t3p-server" target="_top">TicTacToe Client</a>
 
-## Tests with netcat
+## Testing the server responses
 
-Some tests were made with the application netcat to check if the server was responding correctly according to the RFC.
+For testing TCP commands, we developed a little client that allows as to write a command in the standard input and print the server response in the standard output. In the other hand, UDP messages were tested using the tool netcat.
 
-### UDP Messages
+### Login and Logout
 
-The server listens by default UDP port 2001 for Discover type messages.
+In this case, we tested some cases that may happen when a user tries to log in. It is important to highlight that when the client starts, it first connects to the server and then sends the LOGIN command. The server reads this command and decides what to do with it. If the response code is not 200, then the server will automatically close its socket, so after a wrong login, we need to restart the test client.
 
-![image](https://user-images.githubusercontent.com/38018503/114593550-970ef500-9c62-11eb-8240-8cfbf788ae43.png)
+The steps taken in this test were:
 
-### TCP Messages
+1. Login normally
 
-TODO
+2. Send a Login command whilst in lobby.
+
+3. Logout normally
+
+4. Login with an incorrect name (not compliant with specified in RFC).
+
+5. Login another client using a name already taken by another client in the server.
+
+![Alt text](/docs/LOGIN.png?raw=true "Login and Logout" | width=100)
+
+### HEARTBEAT
+
+The heartbeat timeout time can be configured in config.txt file. By default, it is set to 30 seconds, but just for the sake of the test, we changed it to 10 seconds.
+
+Steps taken in this test:
+
+1. Login
+
+2. Send HEARTBEAT command and see that the server received it correctly.
+
+3. Wait 10 seconds for the server to log out the client due to heartbeat expiration.
+
+![Alt text](/docs/HEARTBEAT.png?raw=true "Login and Logout" | width=100)
 
 ## Authors
 
