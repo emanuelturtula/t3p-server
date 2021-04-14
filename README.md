@@ -37,7 +37,9 @@ The steps taken in this test were:
 
 5. Login another client using a name already taken by another client in the server.
 
-![LOGIN](docs/LOGIN.png?raw=true "Login and Logout" | width=100)
+<div align="center">
+    <img src="/docs/LOGIN.png" width="400px"</img> 
+</div>
 
 ### HEARTBEAT
 
@@ -51,7 +53,9 @@ Steps taken in this test:
 
 3. Wait 10 seconds for the server to log out the client due to heartbeat expiration.
 
-![HEARTBEAT](docs/HEARTBEAT.png?raw=true "Heartbeat" | width=100)
+<div align="center">
+    <img src="/docs/HEARTBEAT.png" width="400px"</img> 
+</div>
 
 ## Authors
 
