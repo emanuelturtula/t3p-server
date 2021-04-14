@@ -30,7 +30,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/test_client/tcp_client.out",
-            "args": [],
+            "args": [
+                "127.0.0.1"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

@@ -1,12 +1,26 @@
 #include <iostream>
 #include <mutex>
+#include <map>
 #include "../headers/types.h"
-#include "../headers/config.h"
 
 
 using namespace std;
 
 mutex m_stdout, m_stderr, m_database, m_match;
+
+map<status_t, string> T3PErrorCodes = {
+    {ERROR_BAD_REQUEST, "400|Bad Request \r\n \r\n"},
+    {ERROR_INCORRECT_NAME, "401|Incorrect Name \r\n \r\n"},
+    {ERROR_NAME_TAKEN, "402|Name Taken \r\n \r\n"},
+    {ERROR_PLAYER_NOT_FOUND, "403|Player not Found \r\n \r\n"},
+    {ERROR_PLAYER_OCCUPIED, "404|Player Occupied \r\n \r\n"},
+    {ERROR_BAD_SLOT, "405|Bad Slot \r\n \r\n"},
+    {ERROR_NOT_TURN, "406|Not Turn"},
+    {ERROR_INVALID_COMMAND, "407|Invalid command \r\n \r\n"},
+    {ERROR_COMMAND_OUT_OF_CONTEXT, "408|Command out of context \r\n \r\n"},
+    {ERROR_CONNECTION_LOST, "409|Connection Lost \r\n \r\n"},
+    {ERROR_SERVER_ERROR, "500|Server Error \r\n \r\n"}
+};
 
 /**
  * Methods for Logger
@@ -18,20 +32,26 @@ Logger :: Logger()
 
 }
 
-void Logger :: printMessage(status_t status)
+void Logger :: printErrorMessage(status_t status)
 {
-    this->printer.writeStderr("Got status ID = " + to_string(status));
+    this->printer.writeStderr("Got status ID = " + to_string(status) + ": " + T3PErrorCodes[status]);
+}
+
+void Logger :: printErrorMessage(string message, status_t status)
+{
+    this->printErrorMessage(status);
+    this->printer.writeStderr(message);
 }
 
 void Logger :: printMessage(string message)
 {
-    this->printer.writeStderr(message);
+    this->printer.writeStdout(message);
 }
 
-void Logger :: printMessage(string message, status_t status)
+void Logger :: printMessage(string message, string color)
 {
-    this->printMessage(status);
-    this->printMessage(message);
+    string msg = color + message + RESET;
+    this->printer.writeStdout(msg);
 }
 
 void Logger :: debugMessage(string message)
@@ -105,7 +125,12 @@ MainDatabaseEntry :: MainDatabaseEntry()
  * */
 MainDatabase :: MainDatabase()
 {
-    this->entries.resize(MAX_PLAYERS_ONLINE);
+
+}
+
+void MainDatabase :: resizeEntries(int size)
+{
+    this->entries.resize(size);
 }
 
 void MainDatabase :: clearEntry(int entryNumber)
