@@ -14,6 +14,7 @@
 using namespace std;
 
 extern MainDatabase mainDatabase;
+extern string serverIp;
 extern map<string, string> config;
 
 status_t receiveMessage(int sockfd, struct sockaddr_in *client, socklen_t *clientlen, T3PCommand *t3pCommand);
@@ -49,7 +50,7 @@ void processUDPMesages(int udpSocket, const char *ip)
         if ((status = receiveMessage(udpSocket, &client, &clientlen, &t3pCommand)) != STATUS_OK)
         {
             logger.debugMessage("UDP Thread - Error receiving message");
-            logger.errorHandler.printErrorCode(status);
+            logger.printErrorMessage(status);
             switch(status)
             {
                 case ERROR_BAD_REQUEST:
@@ -157,7 +158,7 @@ status_t checkCommand(T3PCommand t3pCommand)
     {
         if (!regex_match(t3pCommand.dataList.front(), ip_checker))
             return ERROR_BAD_REQUEST;
-        if (t3pCommand.dataList.front() != config["SERVER_IP"])
+        if (t3pCommand.dataList.front() != serverIp)
             return ERROR_BAD_REQUEST;
     }
     return STATUS_OK;

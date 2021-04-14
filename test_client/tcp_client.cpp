@@ -52,6 +52,12 @@ int main(int argc, char *argv[])
         }
         if (stdin_message != "")
         {
+            if (stdin_message == "exit")
+            {
+                cout << "Exiting..." << endl;
+                close(sockfd);
+                return EXIT_SUCCESS;
+            }
             stdin_message += " \r\n \r\n";
             c_message = stdin_message.c_str();
             if (send(sockfd, c_message, strlen(c_message), 0) < 0)

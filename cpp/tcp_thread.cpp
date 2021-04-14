@@ -11,7 +11,7 @@
 using namespace std;
 
 // Global variables defined in another file
-extern map<string, string> config;
+extern map<string, int> config;
 extern vector<Slot> slots;
 extern MainDatabase mainDatabase;
 extern vector<MatchEntry> matchDatabase;
@@ -112,7 +112,8 @@ void processClient(int connectedSockfd, int slotNumber)
     time_t timeout;
     int entryNumber;
     struct timeval tv;
- 
+    tv.tv_sec = SOCKET_RECEIVE_TIMEOUT;
+    tv.tv_usec = 0;
     // Receive first message and save it formatted in a t3pcommand object. Also we check if the command is correct,
     // that is, if it is a known command and if its arguments are valid.
     status = receiveMessage(connectedSockfd, &t3pCommand, context);
@@ -184,9 +185,11 @@ void processClient(int connectedSockfd, int slotNumber)
             break;
         case DISCONNECT_HEARTBEAT:
             logger.printMessage("Client process: " + playerEntry.playerName + " logged out due to heartbeat expiration");
+            mainDatabase.clearEntry(entryNumber);
             break;
         case DISCONNECT_ERROR:
             logger.printErrorMessage(status);
+            mainDatabase.clearEntry(entryNumber);
             break;
     }
                 
@@ -331,7 +334,7 @@ context_t waitingResponseContext(int connectedSockfd, int entryNumber, status_t 
     time_t invitation_time;
     tcpcommand_t command;
     MainDatabaseEntry myEntry;
-    int invitation_timeout = stoi(config.at("INVITATION_TIMEOUT"));
+    int invitation_timeout = config["INVITATION_TIMEOUT"];
     *status = STATUS_OK;
     mainDatabase.setContext(entryNumber, context);
     myEntry = mainDatabase.getEntries()[entryNumber];
@@ -722,6 +725,7 @@ context_t matchContext(int connectedSockfd, int entryNumber, status_t *status)
                 case MARKSLOT:
                     // We first want to know if it's our turn
                     if (!myTurn)
+                    {
                         if ((*status = respond(connectedSockfd, ERROR_NOT_TURN)) != STATUS_OK)
                         {
                             stopMatchOnConnectionLost(matchEntryNumber, playAs);
@@ -729,6 +733,7 @@ context_t matchContext(int connectedSockfd, int entryNumber, status_t *status)
                             mainDatabase.setContext(entryNumber, context);
                             return context;
                         }
+                    }
                     else 
                     {
                         int slotToMark = stoi(t3pCommand.dataList.front());
@@ -748,6 +753,7 @@ context_t matchContext(int connectedSockfd, int entryNumber, status_t *status)
                             matchDatabase[matchEntryNumber].markSlot(slotToMark-1, playAs);
                         }  
                         else
+                        {
                             if ((*status = respond(connectedSockfd, ERROR_BAD_SLOT)) != STATUS_OK)
                             {
                                 stopMatchOnConnectionLost(matchEntryNumber, playAs);
@@ -755,6 +761,7 @@ context_t matchContext(int connectedSockfd, int entryNumber, status_t *status)
                                 mainDatabase.setContext(entryNumber, context);
                                 return context;
                             }
+                        }
                     }
                     break;
                 case OK:
@@ -796,9 +803,6 @@ status_t receiveMessage(int sockfd, T3PCommand *t3pCommand, context_t context)
     
     if ((status = peek_tcp_buffer(sockfd, &read_bytes, &socket_message)) != STATUS_OK)
         return status;
-
-    if (read_bytes < 0)
-        return ERROR_RECEIVING_MESSAGE;
 
     if (read_bytes > 0)
     {
@@ -948,6 +952,10 @@ status_t checkCommand(T3PCommand t3pCommand, context_t context)
                 case HEARTBEAT:
                     break;
                 case MARKSLOT:
+                    if ((t3pCommand.dataList.empty()) ||
+                        (t3pCommand.dataList.front().size() > 1) ||
+                        (t3pCommand.dataList.front().find_first_of("123456789") == string :: npos))
+                        return ERROR_BAD_REQUEST;
                     break;
                 case GIVEUP:
                     break;
