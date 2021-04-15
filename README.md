@@ -2,14 +2,13 @@
 
 In this repository, you will find the T3P Server. This was a project requested in the course Laboratorio de Redes de Computadoras, from FIUBA. This server is based in RFC-TicTacToe (see useful links section for more details).
 
-##### Table of Contents  
-[Headers](#headers)  
-[Emphasis](#emphasis)  
-...snip...    
-<a name="headers"/>
+# Table of Contents  
+[How to compile and run](#how-to-compile-and-run)  
+[Testing the server responses](#emphasis)  
+
 
 ## How to compile and run
-
+<a name="how-to-compile-and-run"/>
 This server needs a linux kernel based OS in order to be compiled and executed. Before compiling, take a look at **config.h**, located in folder **headers**. Here you will find some
 configurations to be made, such as the server IP and the TCP and UDP ports that runs on.
 
@@ -18,7 +17,7 @@ In the root folder, you will find a bash script: **make_server.sh**. This script
 After running the script, type ./server.out to start the server.
 
 ## Testing the server responses
-
+<a name="testing-the-server-responses"/>
 For testing TCP commands, we developed a little client that allows as to write a command in the standard input and print the server response in the standard output. In the other hand, UDP messages were tested using the tool netcat.
 
 ### Login and Logout
