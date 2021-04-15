@@ -20,12 +20,11 @@ In this repository, you will find the T3P Server. This was a project requested i
 ## How to compile and run
 <a name="how-to-compile-and-run"/>
 
-This server needs a linux kernel based OS in order to be compiled and executed. Before compiling, take a look at **config.h**, located in folder **headers**. Here you will find some
-configurations to be made, such as the server IP and the TCP and UDP ports that runs on.
+This server needs a linux kernel based OS in order to be compiled and executed. Before compiling, take a look at **config.txt**, located in the root folder. Here you will find some configurations to be made, such as the server IP and the TCP and UDP ports that runs on.
 
-In the root folder, you will find a bash script: **make_server.sh**. This script will compile all the files and output an executable file called **server.out** in the same folder.
+In the root folder, you will find a bash script: **make_server.sh**. This script will compile all the files and output an executable file called **server.out** in the same folder. Also, we provide a test TCP client in case you want to test the server responses. The script **make_testclient.sh** will generate the executable **tcp_client.out**.
 
-After running the script, type ./server.out to start the server.
+After running the script, type ./server.out to start the server. To run the test client, type ./tcp_client.out and add as an argument the server IP. E.g. ./tcp_client.out 127.0.0.1.
 
 ## Testing the server responses
 <a name="testing-the-server-responses"/>
@@ -48,9 +47,7 @@ The steps taken in this test were:
 
 5. Login another client using a name already taken by another client in the server.
 
-<div align="center">
-    <img src="/docs/LOGIN.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/LOGIN.png" width="1000" height="300"> </img> 
 
 ### HEARTBEAT
 
@@ -64,17 +61,14 @@ Steps taken in this test:
 
 3. Wait 10 seconds for the server to log out the client due to heartbeat expiration.
 
-<div align="center">
-    <img src="/docs/HEARTBEAT.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/HEARTBEAT.png" width="1000" height="300"> </img> 
+
 
 ### Lobby context messages
 
 This test is intented to show that in the Lobby context we can only send certain messages, whilst others will be responded with an Out of context message. To avoid being logged out because of heartbeat timeout, we changed the HEARTBEAT_TIMEOUT variable to 10000 seconds.
 
-<div align="center">
-    <img src="/docs/LOBBY_CONTEXT.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/LOBBY_CONTEXT.png" width="1000" height="300"> </img> 
 
 ### Random invite
 
@@ -96,9 +90,7 @@ To test RANDOMINVITE message, we changed the HEARTBEAT_TIMEOUT variable to 10000
 
 8. Lastly, 'ema' sends a RANDOMINVITE, which 'gonza' will answer with an ACCEPT. 'ema' gets an ACCEPT and the server informs that both players are in a match, receiving randomly each of them a TURNWAIT and a TURNPLAY message.
 
-<div align="center">
-    <img src="/docs/RANDOMINVITE_1.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/RANDOMINVITE_1.png" width="1000" height="400"> </img> 
 
 Another behaviour to check with this command is its randomness. Then we:
 
@@ -108,9 +100,7 @@ Another behaviour to check with this command is its randomness. Then we:
 
 3. 'gonza' received 1 of them and 'gero' 3.
 
-<div align="center">
-    <img src="/docs/RANDOMINVITE_2.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/RANDOMINVITE_2.png" width="1000" height="400"> </img> 
 
 ### Invite
 
@@ -124,9 +114,7 @@ In this test, we check how INVITE command responds. We needed 3 clients in this 
 
 4. 'gonza' invites 'gero', then 'ema' invites 'gero', but the server says 'gero' is occupied.
 
-<div align="center">
-    <img src="/docs/INVITE.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/INVITE.png" width="1000" height="400"> </img> 
 
 ### Match
 
@@ -154,9 +142,7 @@ Preserving the 10000 seconds of heartbeat timeout for testing, we proceed to sta
 
 11. We repeat the same steps. In this case, 'ema' starts, but doesn't answer, so 'gonza' receives a MATCHEND|TIMEOUTWIN and 'ema' a MATCHEND|TIMEOUTLOSE.
 
-<div align="center">
-    <img src="/docs/MATCH_1.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/MATCH_1.png" width="1000" height="500"> </img> 
 
 Then we test what would happen if a match ends in draw.
 
@@ -166,9 +152,7 @@ Then we test what would happen if a match ends in draw.
 
 3. Both 'ema' and 'gonza' receives MATCHEND|DRAW.
 
-<div align="center">
-    <img src="/docs/MATCH_2.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/MATCH_2.png" width="1000" height="400"> </img> 
 
 The last type of message that can be sent by the server is the CONNECTIONLOST one. This happens if one of the players gets disconnected during a match, for example if a heartbeat expires. So to test this, we first change the heartbeat timeout to a reasonable time (20 seconds for instance). 
 
@@ -180,9 +164,7 @@ The last type of message that can be sent by the server is the CONNECTIONLOST on
 
 4. After some seconds, 'gonza' gets disconnected (see server output), so 'ema' receives a MATCHEND|CONNECTIONLOST.
 
-<div align="center">
-    <img src="/docs/MATCH_3.png" width="3000px" height="500px" </img> 
-</div>
+<img src="/docs/MATCH_3.png" width="1000" height="300"> </img> 
 
 Lastly, we show the behaviour with a GIVEUP command together with what we would get in a DISCOVER UDP message in three different cases. We extended the HEARTBEAT_TIMEOUT time once more for the sake of the test.
 
@@ -202,10 +184,7 @@ Lastly, we show the behaviour with a GIVEUP command together with what we would 
 
 8. 'gonza' gives up, receiving a MATCHEND|YOULOSE, while 'ema' receives MATCHEND|YOUWIN.
 
-<div align="center">
-    <img src="/docs/MATCH_4.png" width="3000px" height="500px" </img> 
-</div>
-
+<img src="/docs/MATCH_4.png" width="1000" height="500"> </img> 
 
 ## Useful links
 <a name="useful-links"/>
