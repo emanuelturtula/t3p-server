@@ -1,14 +1,24 @@
 # TicTacToe Server
 
+## Table of Contents  
+
+1. [Introduction](#introduction)
+
+2. [How to compile and run](#how-to-compile-and-run)  
+
+3. [Testing the server responses](#testing-the-server-responses)  
+
+4. [Useful links](#useful-links)
+
+5. [Authors](#authors)
+
+<a name="introduction"/>
+## Introduction
 In this repository, you will find the T3P Server. This was a project requested in the course Laboratorio de Redes de Computadoras, from FIUBA. This server is based in RFC-TicTacToe (see useful links section for more details).
 
-# Table of Contents  
-[How to compile and run](#how-to-compile-and-run)  
-[Testing the server responses](#emphasis)  
-
-
-## How to compile and run
 <a name="how-to-compile-and-run"/>
+## How to compile and run
+
 This server needs a linux kernel based OS in order to be compiled and executed. Before compiling, take a look at **config.h**, located in folder **headers**. Here you will find some
 configurations to be made, such as the server IP and the TCP and UDP ports that runs on.
 
@@ -16,8 +26,9 @@ In the root folder, you will find a bash script: **make_server.sh**. This script
 
 After running the script, type ./server.out to start the server.
 
-## Testing the server responses
 <a name="testing-the-server-responses"/>
+## Testing the server responses
+
 For testing TCP commands, we developed a little client that allows as to write a command in the standard input and print the server response in the standard output. In the other hand, UDP messages were tested using the tool netcat.
 
 ### Login and Logout
@@ -194,12 +205,14 @@ Lastly, we show the behaviour with a GIVEUP command together with what we would 
     <img src="/docs/MATCH_4.png" width="3000px" height="500px" </img> 
 </div>
 
+<a name="useful-links"/>
 ## Useful links
 
 <a href="https://docs.google.com/document/d/1eurJnPB9OFcRuYwLIdP7G9ug2nZrvtSjIa1J8TGMKkw/edit" target="_top">RFC-TicTacToe</a>
 
 <a href="https://github.com/emanuelturtula/t3p-server" target="_top">TicTacToe Client</a>
 
+<a name="authors"/>
 ## Authors
 
 Emanuel Turtula
