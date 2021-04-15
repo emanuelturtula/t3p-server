@@ -42,7 +42,8 @@ int main(int argc, char *argv[])
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd, (struct sockaddr *)&server, sizeof(server)) != 0)
         return EXIT_FAILURE;
-     
+    
+
     while (1)
     {
         if (poll_event(sockfd, &stdin_message, &socket_message) == -1)
@@ -68,7 +69,11 @@ int main(int argc, char *argv[])
             }
         }
         if (socket_message != "")
-            cout << socket_message << endl;
+        {
+            socket_message.erase(socket_message.rfind(" \r\n \r\n"));
+            cout << "\033[1m\033[33m" << socket_message << "\033[0m" << endl;
+        }
+            
     }
 
     close(sockfd);
@@ -91,7 +96,7 @@ int poll_event(int connectedSockfd, string *stdin_message, string *socket_messag
     pfds[1].events = POLLIN;    // Tell me when ready to read
    
     int num_events = poll(pfds, 2, 1); // Wait until an event arrives
-    
+
     if (pfds[0].revents & POLLIN)
         getline(cin, (*stdin_message));
 
