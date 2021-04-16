@@ -9,7 +9,7 @@
                 "-pthread",
                 "${workspaceFolder}/cpp/*.cpp",
                 "-o",
-                "${workspaceFolder}/debug/debug_server.out"
+                "${workspaceFolder}/server.out"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

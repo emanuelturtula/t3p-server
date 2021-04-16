@@ -73,30 +73,30 @@ void processUDPMesages(int udpSocket, const char *ip)
             }
             else if (t3pCommand.command == "DISCOVER")
             {
-                if (t3pCommand.dataList.front() == string(ip))
+                // if (t3pCommand.dataList.front() == string(ip))
+                // {
+                logger.debugMessage("UDP Thread - Received DISCOVER");
+                list<string> availablePlayers = mainDatabase.getAvailablePlayers();
+                list<string> occupiedPlayers = mainDatabase.getOccupiedPlayers();
+                message = "200|OK|";
+                for(auto const& player : availablePlayers)
                 {
-                    logger.debugMessage("UDP Thread - Received DISCOVER");
-                    list<string> availablePlayers = mainDatabase.getAvailablePlayers();
-                    list<string> occupiedPlayers = mainDatabase.getOccupiedPlayers();
-                    message = "200|OK|";
-                    for(auto const& player : availablePlayers)
-                    {
-                        message += player;
-                        message += "|";
-                    }
-                    if (!availablePlayers.empty())
-                        message.erase(prev(message.end()));
-                    message += " \r\n";
-                    for(auto const& player : occupiedPlayers)
-                    {
-                        message += player;
-                        message += "|";
-                    }
-                    if (!occupiedPlayers.empty())
-                        message.erase(prev(message.end()));
-                    message += " \r\n \r\n";
-                    respond(udpSocket, client, clientlen, message);
+                    message += player;
+                    message += "|";
                 }
+                if (!availablePlayers.empty())
+                    message.erase(prev(message.end()));
+                message += " \r\n";
+                for(auto const& player : occupiedPlayers)
+                {
+                    message += player;
+                    message += "|";
+                }
+                if (!occupiedPlayers.empty())
+                    message.erase(prev(message.end()));
+                message += " \r\n \r\n";
+                respond(udpSocket, client, clientlen, message);
+                // }
             }
         }
     }
@@ -156,10 +156,10 @@ status_t checkCommand(T3PCommand t3pCommand)
         return ERROR_BAD_REQUEST;
     if (t3pCommand.command == "DISCOVER")
     {
-        if (!regex_match(t3pCommand.dataList.front(), ip_checker))
-            return ERROR_BAD_REQUEST;
-        if (t3pCommand.dataList.front() != serverIp)
-            return ERROR_BAD_REQUEST;
+        // if (!regex_match(t3pCommand.dataList.front(), ip_checker))
+        //     return ERROR_BAD_REQUEST;
+        // if (t3pCommand.dataList.front() != serverIp)
+        //     return ERROR_BAD_REQUEST;
     }
     return STATUS_OK;
 }
