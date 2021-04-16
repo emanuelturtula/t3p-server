@@ -69,16 +69,17 @@ status_t t3p_server(const char *ip)
     thread heartbeat_thread(heartbeatChecker);
     thread referee_thread(refereeProcess);
     logger.printMessage("Server is listening IP: " + string(ip), BOLDGREEN);
+
+    logger.debugMessage("Putting TCP socket in listening state...");
+    if (listen(tcpSocket, tcpMaxPendingConnections) != 0)
+    {
+        close(tcpSocket);
+        logger.debugMessage("TCP - Error listening");
+        return ERROR_SOCKET_LISTENING;
+    }
+    logger.debugMessage("OK.");
     while (1)
     {
-        logger.debugMessage("Putting TCP socket in listening state...");
-        if (listen(tcpSocket, tcpMaxPendingConnections) != 0)
-        {
-            close(tcpSocket);
-            logger.debugMessage("TCP - Error listening");
-            return ERROR_SOCKET_LISTENING;
-        }
-        logger.debugMessage("OK.");
         logger.debugMessage("Waiting for a client to connect...");
         if ((connectedSocket = accept(tcpSocket, NULL, NULL)) < 0)
         {
