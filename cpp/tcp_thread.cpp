@@ -188,6 +188,7 @@ void processClient(int connectedSockfd, int slotNumber)
             mainDatabase.clearEntry(entryNumber);
             break;
         case DISCONNECT_ERROR:
+            logger.printMessage("Client process: " + playerEntry.playerName + " logged out due to an error reading socket");
             logger.printErrorMessage(status);
             mainDatabase.clearEntry(entryNumber);
             break;
@@ -824,6 +825,8 @@ status_t peek_tcp_buffer(int sockfd, int *read_bytes, string *socket_message)
 {
     char message[TCP_BUFFER_SIZE] = {0};
     *read_bytes = recv(sockfd, message, sizeof(message), MSG_PEEK);
+    if (*read_bytes == 0)
+        return ERROR_RECEIVING_MESSAGE;
     *socket_message = message;
     return STATUS_OK;
 }
