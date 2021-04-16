@@ -20,7 +20,8 @@ map<string, int> config = {
     {"MAX_PLAYERS_ONLINE", 0},
     {"HEARTBEAT_TIMEOUT", 0},
     {"MARKSLOT_TIMEOUT", 0},
-    {"INVITATION_TIMEOUT", 0}
+    {"INVITATION_TIMEOUT", 0},
+    {"DEBUG_MESSAGES", 0}
 };
 
 bool loadConfig();
@@ -106,7 +107,13 @@ bool loadConfig()
 
     for (auto const& pair : config)
     {
-        if (pair.second == 0)
+        if ((pair.first == "DEBUG_MESSAGES") &&
+            ((pair.second != 0) && (pair.second != 1)))
+        {
+            cerr << "Error loading configuration file. Invalid value for DEBUG_MESSAGES. Must be 1 or 0" << endl;
+            return false;
+        }
+        if ((pair.first != "DEBUG_MESSAGES") && (pair.second == 0))
         {
             cerr << "Error loading configuration file. Missing value: " << pair.first << endl;
             return false;

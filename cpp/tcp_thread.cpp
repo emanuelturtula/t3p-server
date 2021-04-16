@@ -260,7 +260,7 @@ context_t lobbyContext(int connectedSockfd, int entryNumber, status_t *status)
             {
                 case HEARTBEAT:
                     mainDatabase.udpateHeartbeat(entryNumber);
-                    logger.printMessage("Client process: " + myEntry.playerName + " updated heartbeat");
+                    logger.debugMessage("Client process: " + myEntry.playerName + " updated heartbeat");
                     break;
                 case INVITE:
                     invitePlayer = t3pCommand.dataList.front();  

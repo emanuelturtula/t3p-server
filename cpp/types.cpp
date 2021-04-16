@@ -8,6 +8,8 @@ using namespace std;
 
 mutex m_stdout, m_stderr, m_database, m_match;
 
+extern map<string, int> config;
+
 map<status_t, string> T3PErrorCodes = {
     {ERROR_BAD_REQUEST, "400|Bad Request"},
     {ERROR_INCORRECT_NAME, "401|Incorrect Name"},
@@ -56,9 +58,8 @@ void Logger :: printMessage(string message, string color)
 
 void Logger :: debugMessage(string message)
 {
-    #if defined(DEBUG_MESSAGES)
+    if (config["DEBUG_MESSAGES"])
         this->printMessage(message);
-    #endif
 }
 
 
